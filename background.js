@@ -9,6 +9,8 @@ let marksTree = {
   marks: {}
 };
 
+let tabsForNewMarks = new Set();
+
 // Utility functions to manage the marks tree
 function createMark(tab, folderId = "root") {
   const markId = `mark-${Date.now()}`;
@@ -27,10 +29,12 @@ function createMark(tab, folderId = "root") {
 
 function createNewMark(folderId = "root") {
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
+    tabsForNewMarks.add(newTab.id);
     browser.tabs.onUpdated.addListener(function listener(tabId, changeInfo, tab) {
       if (tabId === newTab.id && changeInfo.status === 'complete') {
         createMark(tab, folderId);
         browser.tabs.onUpdated.removeListener(listener);
+        tabsForNewMarks.delete(tabId);
       }
     });
   });
@@ -117,7 +121,9 @@ browser.commands.onCommand.addListener(command => {
 });
 
 browser.tabs.onCreated.addListener(tab => {
-  createMark(tab);
+  if (!tabsForNewMarks.has(tab.id)) {
+    createMark(tab);
+  }
 });
 
 browser.tabs.onRemoved.addListener(tabId => {
