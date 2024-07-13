@@ -34,6 +34,10 @@ function createNewMark(folderId = "root") {
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
     tabsForNewMarks.add(newTab.id);
     tabToFolderMap[newTab.id] = folderId;
+    // Focus the address bar of the new tab
+    browser.tabs.update(newTab.id, { active: true }).then(() => {
+      browser.tabs.executeScript(newTab.id, { code: 'document.getElementById("urlbar").focus();' });
+    });
   });
 }
 
@@ -157,8 +161,11 @@ browser.commands.onCommand.addListener(command => {
   } else if (command === 'close_mark') {
     browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
       const tabId = tabs[0].id;
+      const markId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tabId);
+      if (markId) {
+        removeMark(markId);
+      }
       browser.tabs.remove(tabId);
-      removeMark(`mark-${tabId}`);
     });
   } else if (command === 'new_tab_with_mark') {
     browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
