@@ -173,16 +173,23 @@ function isDescendant(childId, parentId) {
   return false;
 }
 
-function isDescendant(childId, parentId) {
-  console.log('Is descendant', childId, parentId);
-  if (childId === parentId) {
-    return true;
+function openFolderInNewWindow(folderId) {
+  const folder = marksTree.folders[folderId];
+  if (folder) {
+    const urls = folder.children
+      .filter(id => marksTree.marks[id])
+      .map(id => marksTree.marks[id].url);
+    browser.windows.create({ url: urls });
   }
-  const folder = marksTree.folders[childId];
-  if (folder && folder.parentId) {
-    return isDescendant(folder.parentId, parentId);
+}
+
+function hideFolderTabs(folderId) {
+  const folder = marksTree.folders[folderId];
+  if (folder) {
+    folder.children
+      .filter(id => marksTree.marks[id])
+      .forEach(id => browser.tabs.remove(marksTree.marks[id].tabId));
   }
-  return false;
 }
 
 function saveMarksTree() {
@@ -272,6 +279,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     moveItem(message.draggedId, message.targetFolderId);
   } else if (message.action === 'toggleFolderCollapse') {
     toggleFolderCollapse(message.folderId);
+  } else if (message.action === 'openFolderInNewWindow') {
+    openFolderInNewWindow(message.folderId);
+  } else if (message.action === 'hideFolderTabs') {
+    hideFolderTabs(message.folderId);
   }
 });
 

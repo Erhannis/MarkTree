@@ -247,6 +247,24 @@ document.addEventListener('DOMContentLoaded', () => {
         contextMenu.remove();
       };
       contextMenu.appendChild(addFolderOption);
+
+      const openInNewWindowOption = document.createElement('div');
+      openInNewWindowOption.textContent = 'Open in new window';
+      openInNewWindowOption.onclick = () => {
+        console.log('Context menu - Open in new window', id);
+        browser.runtime.sendMessage({ action: 'openFolderInNewWindow', folderId: id });
+        contextMenu.remove();
+      };
+      contextMenu.appendChild(openInNewWindowOption);
+
+      const hideTabsOption = document.createElement('div');
+      hideTabsOption.textContent = 'Hide tabs';
+      hideTabsOption.onclick = () => {
+        console.log('Context menu - Hide tabs', id);
+        browser.runtime.sendMessage({ action: 'hideFolderTabs', folderId: id });
+        contextMenu.remove();
+      };
+      contextMenu.appendChild(hideTabsOption);
     }
 
     const deleteOption = document.createElement('div');
