@@ -101,7 +101,7 @@ browser.commands.onCommand.addListener(command => {
     browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
       const tabId = tabs[0].id;
       browser.tabs.remove(tabId);
-      removeMark(tabId);
+      removeMark(`mark-${tabId}`);
     });
   }
 });
@@ -111,7 +111,7 @@ browser.tabs.onCreated.addListener(tab => {
 });
 
 browser.tabs.onRemoved.addListener(tabId => {
-  removeMark(tabId);
+  removeMark(`mark-${tabId}`);
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -132,6 +132,17 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
     browser.tabs.create({ url: info.linkUrl }).then(newTab => {
       createMark(newTab);
     });
+  }
+});
+
+// Listen for messages from sidebar
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'createMark') {
+    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+      createMark(tabs[0], message.folderId);
+    });
+  } else if (message.action === 'createFolder') {
+    createFolder(message.folderName, message.parentId);
   }
 });
 

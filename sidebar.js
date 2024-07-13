@@ -1,6 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
   loadMarksTree();
 
+  document.getElementById('new-folder').onclick = () => {
+    const folderName = prompt('Enter folder name:');
+    if (folderName) {
+      browser.runtime.sendMessage({ action: 'createFolder', folderName: folderName, parentId: 'root' });
+    }
+  };
+
+  document.getElementById('new-mark').onclick = () => {
+    browser.runtime.sendMessage({ action: 'createMark', folderId: 'root' });
+  };
+
   function loadMarksTree() {
     browser.storage.local.get('marksTree').then(result => {
       if (result.marksTree) {
@@ -51,30 +62,4 @@ document.addEventListener('DOMContentLoaded', () => {
       loadMarksTree();
     }
   });
-
-  document.getElementById('new-folder').onclick = () => {
-    const folderName = prompt('Enter folder name:');
-    if (folderName) {
-      createFolder(folderName);
-    }
-  };
-
-  document.getElementById('new-mark').onclick = () => {
-    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      createMark(tabs[0]);
-    });
-  };
-
-  function createFolder(folderName, parentId = 'root') {
-    const folderId = `folder-${Date.now()}`;
-    const folder = {
-      id: folderId,
-      name: folderName,
-      children: []
-    };
-    marksTree.folders[folderId] = folder;
-    marksTree.folders[parentId].children.push(folderId);
-    saveMarksTree();
-    notifySidebar();
-  }
 });
