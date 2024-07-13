@@ -16,6 +16,19 @@ function createMark(tab) {
   notifySidebar();
 }
 
+function updateMark(tabId, updateInfo) {
+  if (marksTree.marks[tabId]) {
+    if (updateInfo.title) {
+      marksTree.marks[tabId].title = updateInfo.title;
+    }
+    if (updateInfo.url) {
+      marksTree.marks[tabId].url = updateInfo.url;
+    }
+    saveMarksTree();
+    notifySidebar();
+  }
+}
+
 function removeMark(tabId) {
   delete marksTree.marks[tabId];
   saveMarksTree();
@@ -59,6 +72,12 @@ browser.tabs.onCreated.addListener(tab => {
 
 browser.tabs.onRemoved.addListener(tabId => {
   removeMark(tabId);
+});
+
+browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' || changeInfo.url || changeInfo.title) {
+    updateMark(tabId, changeInfo);
+  }
 });
 
 // Context menu for opening a link with a corresponding mark
