@@ -26,5 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add folder rendering logic similarly
   }
 
+  // Listen for messages from the background script
+  browser.runtime.onMessage.addListener((message) => {
+    if (message.action === 'updateMarks') {
+      loadMarksTree();
+    }
+  });
+
   // Add event listeners for creating, renaming, and removing marks/folders
 });
