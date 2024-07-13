@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         clearSelection();
         selectItem(folderElement);
+        toggleCollapse(folderElement);
       }
       event.stopPropagation();
     };
@@ -194,6 +195,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function selectRange(targetElement) {
     console.log('Select range to', targetElement.dataset.id);
     // Select range logic can be added here if needed
+  }
+
+  function toggleCollapse(element) {
+    console.log('Toggle collapse', element.dataset.id);
+    const childrenContainer = element.querySelector('.children');
+    if (childrenContainer) {
+      childrenContainer.classList.toggle('collapsed');
+      element.classList.toggle('collapsed');
+    }
   }
 
   function showContextMenu(event, id, isFolder) {

@@ -10,6 +10,12 @@
       padding: 5px;
       cursor: pointer;
     }
+    .folder {
+      background-color: lightblue;
+    }
+    .folder.collapsed {
+      background-color: lightgreen;
+    }
     .folder.selected, .mark.selected {
       background-color: lightgray;
     }
@@ -23,6 +29,12 @@
     /* Add space at the bottom of the tree */
     .spacer {
       height: 20px;
+    }
+    .children {
+      padding-left: 20px;
+    }
+    .children.collapsed {
+      display: none;
     }
   </style>
 </head>
