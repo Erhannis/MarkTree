@@ -56,7 +56,8 @@ function createFolder(folderName, parentId = "root") {
   const folder = {
     id: folderId,
     name: folderName,
-    children: []
+    children: [],
+    parentId: parentId
   };
   marksTree.folders[folderId] = folder;
   marksTree.folders[parentId].children.push(folderId);
@@ -74,9 +75,9 @@ function removeFolder(folderId) {
         removeMark(childId);
       }
     });
-    const parent = marksTree.folders[folder.parentId];
-    parent.children = parent.children.filter(id => id !== folderId);
-    if (folderId != "root") {
+    if (folderId !== "root") {
+      const parent = marksTree.folders[folder.parentId];
+      parent.children = parent.children.filter(id => id !== folderId);
       delete marksTree.folders[folderId];
     }
     saveMarksTree();
