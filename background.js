@@ -30,30 +30,26 @@ function createMark(tab, folderId = "root") {
 
 function createNewMark(folderId = "root") {
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
-    console.log("createNewMark", newTab.id);
     tabsForNewMarks.add(newTab.id);
     tabToFolderMap[newTab.id] = folderId;
   });
 }
 
 function handleTabUpdate(tabId, changeInfo, tab) {
-  if (tabsForNewMarks.has(tabId) && changeInfo.status === 'complete') {
-    const folderId = tabToFolderMap[tabId] || 'root';
-    createMark(tab, folderId);
-    tabsForNewMarks.delete(tabId);
-    delete tabToFolderMap[tabId];
-  }
-}
-
-function handleTabCreated(tab) {
-  console.log("handleTabCreated", tab.id);
-  if (!tabsForNewMarks.has(tab.id)) {
-    browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
-      const activeTab = activeTabs[0];
-      const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
-      const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
+  if (changeInfo.status === 'complete') {
+    if (tabsForNewMarks.has(tabId)) {
+      const folderId = tabToFolderMap[tabId] || 'root';
       createMark(tab, folderId);
-    });
+      tabsForNewMarks.delete(tabId);
+      delete tabToFolderMap[tabId];
+    } else {
+      browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
+        const activeTab = activeTabs[0];
+        const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
+        const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
+        createMark(tab, folderId);
+      });
+    }
   }
 }
 
@@ -149,18 +145,8 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   handleTabUpdate(tabId, changeInfo, tab);
 });
 
-browser.tabs.onCreated.addListener(tab => {
-  handleTabCreated(tab);
-});
-
 browser.tabs.onRemoved.addListener(tabId => {
   removeMark(`mark-${tabId}`);
-});
-
-browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' || changeInfo.url || changeInfo.title) {
-    updateMark(tabId, changeInfo);
-  }
 });
 
 // Context menu for opening a link with a corresponding mark
