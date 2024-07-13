@@ -1,4 +1,5 @@
 Disable browser.tabs.onRemoved
 Collapse folders
+select multiple items
+drag items
 ctrl-y on non-mark should still close
-style suddenly changed??
