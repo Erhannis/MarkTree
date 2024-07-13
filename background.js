@@ -287,3 +287,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 loadMarksTree();
+
+// Add listener for browser action to open the sidebar
+browser.browserAction.onClicked.addListener(() => {
+  browser.sidebarAction.open();
+});
