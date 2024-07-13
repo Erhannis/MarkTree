@@ -209,22 +209,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const lastSelected = selectedArray[selectedArray.length - 1];
 
     let startIndex = allItems.findIndex(element => element.dataset.id === firstSelected);
-    let endIndex = allItems.findIndex(element => element.dataset.id === targetId);
+    let endIndex = allItems.findIndex(element => element.dataset.id === lastSelected);
+    let targetIndex = allItems.findIndex(element => element.dataset.id === targetId);
 
-    if (startIndex > endIndex) {
-      [startIndex, endIndex] = [endIndex, startIndex];
-    }
+    let indexA = Math.min(startIndex, endIndex, targetIndex);
+    let indexB = Math.max(startIndex, endIndex, targetIndex);
+    [startIndex, endIndex] = [indexA, indexB];
 
-    const parentFolder = (element) => {
+    let startItem = allItems[startIndex];
+    let endItem = allItems[endIndex];
+
+    const parentChain = (chain, element) => {
+      chain.push(element);
       let parent = element.closest('.folder');
-      while (parent && !selectedItems.has(parent.dataset.id)) {
-        parent = parent.closest('.folder');
+      if (parent) {
+        chain = parentChain(chain, parent);
       }
-      return parent;
+      return chain;
     };
 
-    const firstParent = parentFolder(document.querySelector(`[data-id="${firstSelected}"]`));
-    const lastParent = parentFolder(document.querySelector(`[data-id="${targetId}"]`));
+    let firstChain = parentChain([], document.querySelector(`[data-id="${startItem}"]`));
+    let lastChain = parentChain([], document.querySelector(`[data-id="${endItem}"]`));
+
+
+    
+    const firstParent = parentFolder();
+    const lastParent = parentFolder(document.querySelector(`[data-id="${endItem}"]`));
 
     if (firstParent !== lastParent) {
       const parentFolderId = (element) => {
