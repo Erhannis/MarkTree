@@ -202,8 +202,51 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function selectRange(targetElement) {
-    console.log('Select range to', targetElement.dataset.id);
-    // Select range logic can be added here if needed
+    const targetId = targetElement.dataset.id;
+    const allItems = Array.from(document.querySelectorAll('.folder, .mark'));
+    const selectedArray = Array.from(selectedItems);
+    const firstSelected = selectedArray[0];
+    const lastSelected = selectedArray[selectedArray.length - 1];
+
+    let startIndex = allItems.findIndex(element => element.dataset.id === firstSelected);
+    let endIndex = allItems.findIndex(element => element.dataset.id === targetId);
+
+    if (startIndex > endIndex) {
+      [startIndex, endIndex] = [endIndex, startIndex];
+    }
+
+    const parentFolder = (element) => {
+      let parent = element.closest('.folder');
+      while (parent && !selectedItems.has(parent.dataset.id)) {
+        parent = parent.closest('.folder');
+      }
+      return parent;
+    };
+
+    const firstParent = parentFolder(document.querySelector(`[data-id="${firstSelected}"]`));
+    const lastParent = parentFolder(document.querySelector(`[data-id="${targetId}"]`));
+
+    if (firstParent !== lastParent) {
+      const parentFolderId = (element) => {
+        const parent = element.closest('.folder');
+        return parent ? parent.dataset.id : 'root';
+      };
+
+      const firstParentId = parentFolderId(document.querySelector(`[data-id="${firstSelected}"]`));
+      const lastParentId = parentFolderId(document.querySelector(`[data-id="${targetId}"]`));
+
+      if (firstParentId !== lastParentId) {
+        clearSelection();
+        selectItem(document.querySelector(`[data-id="${firstParentId}"]`));
+        selectItem(document.querySelector(`[data-id="${lastParentId}"]`));
+        return;
+      }
+    }
+
+    clearSelection();
+    for (let i = startIndex; i <= endIndex; i++) {
+      selectItem(allItems[i]);
+    }
   }
 
   function toggleCollapse(element) {
