@@ -53,16 +53,19 @@ document.addEventListener('DOMContentLoaded', () => {
         clearSelection();
         selectItem(folderElement);
       }
+      event.stopPropagation();
     };
 
     folderElement.ondragstart = (event) => {
       console.log('Folder drag started', folder.id);
       event.dataTransfer.setData('text/plain', folder.id);
+      event.stopPropagation();
     };
 
     folderElement.ondragover = (event) => {
       event.preventDefault();
       console.log('Folder drag over', folder.id);
+      event.stopPropagation();
     };
 
     folderElement.ondrop = (event) => {
@@ -72,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (draggedId && draggedId !== folder.id && !isDescendant(draggedId, folder.id, tree)) {
         moveItem(draggedId, folder.id, tree);
       }
+      event.stopPropagation();
     };
 
     folderElement.oncontextmenu = (event) => {
@@ -114,16 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
         clearSelection();
         selectItem(markElement);
       }
+      event.stopPropagation();
     };
 
     markElement.ondragstart = (event) => {
       console.log('Mark drag started', mark.id);
       event.dataTransfer.setData('text/plain', mark.id);
+      event.stopPropagation();
     };
 
     markElement.ondragover = (event) => {
       event.preventDefault();
       console.log('Mark drag over', mark.id);
+      event.stopPropagation();
     };
 
     markElement.ondrop = (event) => {
@@ -133,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (draggedId && draggedId !== mark.id) {
         moveItem(draggedId, mark.folderId, tree);
       }
+      event.stopPropagation();
     };
 
     markElement.oncontextmenu = (event) => {
