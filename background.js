@@ -42,11 +42,9 @@ function handleTabUpdate(tabId, changeInfo, tab) {
   if (changeInfo.status === 'complete') {
     const existingMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tabId);
     if (existingMarkId) {
-      console.log("Tab already has a mark:", existingMarkId);
-      return; // Tab already has a mark, no need to create another one
-    }
-
-    if (tabsForNewMarks.has(tabId)) {
+      console.log("Updating existing mark:", existingMarkId);
+      updateMark(tabId, { url: tab.url, title: tab.title });
+    } else if (tabsForNewMarks.has(tabId)) {
       const folderId = tabToFolderMap[tabId] || 'root';
       createMark(tab, folderId);
       tabsForNewMarks.delete(tabId);
