@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
       console.log('Folder context menu', folder.id);
+      clearSelection();
+      selectItem(folderElement);
       showContextMenu(event, folder.id, true);
     };
 
@@ -147,6 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
       console.log('Mark context menu', mark.id);
+      clearSelection();
+      selectItem(markElement);
       showContextMenu(event, mark.id, false);
     };
 
