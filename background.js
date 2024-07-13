@@ -30,6 +30,7 @@ function createMark(tab, folderId = "root") {
 
 function createNewMark(folderId = "root") {
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
+    console.log("createNewMark", newTab.id);
     tabsForNewMarks.add(newTab.id);
     tabToFolderMap[newTab.id] = folderId;
   });
@@ -41,6 +42,18 @@ function handleTabUpdate(tabId, changeInfo, tab) {
     createMark(tab, folderId);
     tabsForNewMarks.delete(tabId);
     delete tabToFolderMap[tabId];
+  }
+}
+
+function handleTabCreated(tab) {
+  console.log("handleTabCreated", tab.id);
+  if (!tabsForNewMarks.has(tab.id)) {
+    browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
+      const activeTab = activeTabs[0];
+      const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
+      const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
+      createMark(tab, folderId);
+    });
   }
 }
 
@@ -134,6 +147,10 @@ browser.commands.onCommand.addListener(command => {
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   handleTabUpdate(tabId, changeInfo, tab);
+});
+
+browser.tabs.onCreated.addListener(tab => {
+  handleTabCreated(tab);
 });
 
 browser.tabs.onRemoved.addListener(tabId => {
