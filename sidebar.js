@@ -1,14 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOMContentLoaded event fired');
   loadMarksTree();
 
   document.getElementById('new-folder').onclick = () => {
     const folderName = prompt('Enter folder name:');
     if (folderName) {
+      console.log(`Creating new folder: ${folderName}`);
       browser.runtime.sendMessage({ action: 'createFolder', folderName: folderName, parentId: 'root' });
     }
   };
 
   document.getElementById('new-mark').onclick = () => {
+    console.log('Creating new mark in root');
     browser.runtime.sendMessage({ action: 'createMark', folderId: 'root' });
   };
 
@@ -16,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentTree = null; // Define a global variable to hold the current tree state
 
   function loadMarksTree() {
+    console.log('Loading marks tree');
     browser.storage.local.get('marksTree').then(result => {
       if (result.marksTree) {
         currentTree = result.marksTree; // Store the tree state in the global variable
@@ -25,12 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderMarksTree(tree) {
+    console.log('Rendering marks tree', tree);
     const container = document.getElementById('sidebar-content');
     container.innerHTML = ''; // Clear existing content
     renderFolder(tree.folders['root'], container, tree);
   }
 
   function renderFolder(folder, container, tree) {
+    console.log(`Rendering folder: ${folder.name}`, folder);
     const folderElement = document.createElement('div');
     folderElement.className = 'folder';
     folderElement.textContent = folder.name;
@@ -38,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     folderElement.draggable = true;
 
     folderElement.onclick = (event) => {
+      console.log('Folder clicked', folder.id, event);
       if (event.ctrlKey || event.metaKey) {
         toggleSelect(folderElement);
       } else if (event.shiftKey) {
@@ -49,16 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     folderElement.ondragstart = (event) => {
+      console.log('Folder drag started', folder.id);
       event.dataTransfer.setData('text/plain', folder.id);
     };
 
     folderElement.ondragover = (event) => {
       event.preventDefault();
+      console.log('Folder drag over', folder.id);
     };
 
     folderElement.ondrop = (event) => {
       event.preventDefault();
       const draggedId = event.dataTransfer.getData('text/plain');
+      console.log('Folder drop', folder.id, draggedId);
       if (draggedId && draggedId !== folder.id && !isDescendant(draggedId, folder.id, tree)) {
         moveItem(draggedId, folder.id, tree);
       }
@@ -67,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     folderElement.oncontextmenu = (event) => {
       event.preventDefault();
       event.stopPropagation();
+      console.log('Folder context menu', folder.id);
       showContextMenu(event, folder.id, true);
     };
 
@@ -86,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderMark(mark, container, tree) {
+    console.log(`Rendering mark: ${mark.title}`, mark);
     const markElement = document.createElement('div');
     markElement.className = 'mark';
     markElement.textContent = `${mark.title} (${mark.url})`;
@@ -93,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     markElement.draggable = true;
 
     markElement.onclick = (event) => {
+      console.log('Mark clicked', mark.id, event);
       if (event.ctrlKey || event.metaKey) {
         toggleSelect(markElement);
       } else if (event.shiftKey) {
@@ -104,16 +117,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     markElement.ondragstart = (event) => {
+      console.log('Mark drag started', mark.id);
       event.dataTransfer.setData('text/plain', mark.id);
     };
 
     markElement.ondragover = (event) => {
       event.preventDefault();
+      console.log('Mark drag over', mark.id);
     };
 
     markElement.ondrop = (event) => {
       event.preventDefault();
       const draggedId = event.dataTransfer.getData('text/plain');
+      console.log('Mark drop', mark.id, draggedId);
       if (draggedId && draggedId !== mark.id) {
         moveItem(draggedId, mark.folderId, tree);
       }
@@ -122,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     markElement.oncontextmenu = (event) => {
       event.preventDefault();
       event.stopPropagation();
+      console.log('Mark context menu', mark.id);
       showContextMenu(event, mark.id, false);
     };
 
@@ -130,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function toggleSelect(element) {
     const id = element.dataset.id;
+    console.log('Toggle select', id);
     if (selectedItems.has(id)) {
       selectedItems.delete(id);
       element.classList.remove('selected');
@@ -141,11 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function selectItem(element) {
     const id = element.dataset.id;
+    console.log('Select item', id);
     selectedItems.add(id);
     element.classList.add('selected');
   }
 
   function clearSelection() {
+    console.log('Clear selection');
     selectedItems.forEach(id => {
       const element = document.querySelector(`[data-id="${id}"]`);
       if (element) {
@@ -156,10 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function selectRange(targetElement) {
+    console.log('Select range to', targetElement.dataset.id);
     // Select range logic can be added here if needed
   }
 
   function showContextMenu(event, id, isFolder) {
+    console.log('Show context menu', id, isFolder);
     // Remove any existing custom context menu
     const existingMenu = document.querySelector('.context-menu');
     if (existingMenu) {
@@ -173,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const addMarkOption = document.createElement('div');
       addMarkOption.textContent = 'New Mark';
       addMarkOption.onclick = () => {
+        console.log('Context menu - New Mark', id);
         browser.runtime.sendMessage({ action: 'createMark', folderId: id });
         contextMenu.remove();
       };
@@ -182,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addFolderOption.textContent = 'New Folder';
       addFolderOption.onclick = () => {
         const folderName = prompt('Enter folder name:');
+        console.log('Context menu - New Folder', id, folderName);
         if (folderName) {
           browser.runtime.sendMessage({ action: 'createFolder', folderName: folderName, parentId: id });
         }
@@ -193,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteOption = document.createElement('div');
     deleteOption.textContent = 'Delete';
     deleteOption.onclick = () => {
+      console.log('Context menu - Delete', id);
       if (confirm('Are you sure you want to delete the selected items?')) {
         selectedItems.forEach(itemId => {
           if (currentTree.folders[itemId]) {
@@ -225,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function moveItem(draggedId, targetFolderId, tree) {
+    console.log('Move item', draggedId, targetFolderId);
     if (tree.folders[draggedId]) {
       const folder = tree.folders[draggedId];
       const parentFolder = tree.folders[folder.parentId];
@@ -243,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function isDescendant(childId, parentId, tree) {
+    console.log('Is descendant', childId, parentId);
     if (childId === parentId) {
       return true;
     }
@@ -254,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveMarksTree(tree) {
-    console.log("saveMarksTree");
+    console.log("saveMarksTree", tree);
     browser.storage.local.set({ marksTree: tree });
   }
 
@@ -265,9 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Listen for key presses to delete selected items
   document.addEventListener('keydown', (event) => {
+    console.log('Key down', event.key);
     if (event.key === 'Delete' || event.key === 'Backspace') {
       if (confirm('Are you sure you want to delete the selected items?')) {
         selectedItems.forEach(itemId => {
+          console.log('Deleting item', itemId);
           if (currentTree.folders[itemId]) {
             browser.runtime.sendMessage({ action: 'deleteFolder', folderId: itemId });
           } else if (currentTree.marks[itemId]) {
@@ -280,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Listen for messages from the background script
   browser.runtime.onMessage.addListener((message) => {
+    console.log('Message received', message);
     if (message.action === 'updateMarks') {
       loadMarksTree();
     }
