@@ -3,7 +3,8 @@ let marksTree = {
     "root": {
       id: "root",
       name: "root",
-      children: []
+      children: [],
+      collapsed: false // Add collapsed property
     }
   },
   marks: {}
@@ -82,7 +83,8 @@ function createFolder(folderName, parentId = "root") {
     id: folderId,
     name: folderName,
     children: [],
-    parentId: parentId
+    parentId: parentId,
+    collapsed: false // Add collapsed property
   };
   marksTree.folders[folderId] = folder;
   marksTree.folders[parentId].children.push(folderId);
@@ -148,6 +150,27 @@ function moveItem(draggedId, targetFolderId) {
   }
   saveMarksTree();
   notifySidebar();
+}
+
+function toggleFolderCollapse(folderId) {
+  console.log("toggleFolderCollapse", folderId);
+  if (marksTree.folders[folderId]) {
+    marksTree.folders[folderId].collapsed = !marksTree.folders[folderId].collapsed;
+    saveMarksTree();
+    notifySidebar();
+  }
+}
+
+function isDescendant(childId, parentId) {
+  console.log('Is descendant', childId, parentId);
+  if (childId === parentId) {
+    return true;
+  }
+  const folder = marksTree.folders[childId];
+  if (folder && folder.parentId) {
+    return isDescendant(folder.parentId, parentId);
+  }
+  return false;
 }
 
 function isDescendant(childId, parentId) {
@@ -247,6 +270,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     removeMark(message.markId);
   } else if (message.action === 'moveItem') {
     moveItem(message.draggedId, message.targetFolderId);
+  } else if (message.action === 'toggleFolderCollapse') {
+    toggleFolderCollapse(message.folderId);
   }
 });
 

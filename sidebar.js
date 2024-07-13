@@ -47,6 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
     folderElement.dataset.id = folder.id;
     folderElement.draggable = true;
 
+    if (folder.collapsed) {
+      folderElement.classList.add('collapsed');
+    }
+
     folderElement.onclick = (event) => {
       console.log('Folder clicked', folder.id, event);
       if (event.ctrlKey || event.metaKey) {
@@ -57,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearSelection();
         selectItem(folderElement);
         toggleCollapse(folderElement);
+        browser.runtime.sendMessage({ action: 'toggleFolderCollapse', folderId: folder.id });
       }
       event.stopPropagation();
     };
@@ -94,6 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const childrenContainer = document.createElement('div');
     childrenContainer.className = 'children';
+
+    if (folder.collapsed) {
+      childrenContainer.classList.add('collapsed');
+    }
 
     folder.children.forEach(childId => {
       if (tree.folders[childId]) {
