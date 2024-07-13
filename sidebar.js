@@ -30,6 +30,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const folderElement = document.createElement('div');
     folderElement.className = 'folder';
     folderElement.textContent = folder.name;
+    folderElement.oncontextmenu = (event) => {
+      event.preventDefault();
+      const folderId = folder.id;
+      console.log("oncontextmenu: ", folderId);
+      const contextMenu = document.createElement('div');
+      contextMenu.className = 'context-menu';
+      const addMarkOption = document.createElement('div');
+      addMarkOption.textContent = 'Add Mark';
+      addMarkOption.onclick = () => {
+        browser.runtime.sendMessage({ action: 'createMark', folderId: folderId });
+        document.body.removeChild(contextMenu);
+      };
+      contextMenu.appendChild(addMarkOption);
+      contextMenu.style.position = 'absolute';
+      contextMenu.style.top = `${event.clientY}px`;
+      contextMenu.style.left = `${event.clientX}px`;
+      document.body.appendChild(contextMenu);
+      
+      document.addEventListener('click', () => {
+        if (contextMenu.parentNode) {
+          contextMenu.parentNode.removeChild(contextMenu);
+        }
+      }, { once: true });
+    };
 
     const childrenContainer = document.createElement('div');
     childrenContainer.className = 'children';
