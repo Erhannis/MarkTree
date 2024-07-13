@@ -63,15 +63,19 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       contextMenu.appendChild(addFolderOption);
 
-      const deleteFolderOption = document.createElement('div');
-      deleteFolderOption.textContent = 'Delete Folder';
-      deleteFolderOption.onclick = () => {
-        if (folderId !== 'root' && confirm('Are you sure you want to delete this folder and all its contents?')) {
-          browser.runtime.sendMessage({ action: 'deleteFolder', folderId: folderId });
+      const deleteOption = document.createElement('div');
+      deleteOption.textContent = 'Delete';
+      deleteOption.onclick = () => {
+        if (folderId !== 'root') {
+          if (confirm('Are you sure you want to delete this folder and all its contents?')) {
+            browser.runtime.sendMessage({ action: 'deleteFolder', folderId: folderId });
+          }
+        } else {
+          alert('Cannot delete the root folder.');
         }
         contextMenu.remove();
       };
-      contextMenu.appendChild(deleteFolderOption);
+      contextMenu.appendChild(deleteOption);
 
       contextMenu.style.position = 'absolute';
       contextMenu.style.top = `${event.clientY}px`;
@@ -112,6 +116,45 @@ document.addEventListener('DOMContentLoaded', () => {
     markElement.textContent = `${mark.title} (${mark.url})`;
     markElement.onclick = () => {
       browser.tabs.update(mark.tabId, { active: true });
+    };
+    markElement.oncontextmenu = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Remove any existing custom context menu
+      const existingMenu = document.querySelector('.context-menu');
+      if (existingMenu) {
+        existingMenu.remove();
+      }
+
+      const markId = mark.id;
+      const contextMenu = document.createElement('div');
+      contextMenu.className = 'context-menu';
+
+      const deleteOption = document.createElement('div');
+      deleteOption.textContent = 'Delete';
+      deleteOption.onclick = () => {
+        browser.runtime.sendMessage({ action: 'deleteMark', markId: markId });
+        contextMenu.remove();
+      };
+      contextMenu.appendChild(deleteOption);
+
+      contextMenu.style.position = 'absolute';
+      contextMenu.style.top = `${event.clientY}px`;
+      contextMenu.style.left = `${event.clientX}px`;
+      contextMenu.style.background = 'white';
+      contextMenu.style.border = '1px solid #ccc';
+      contextMenu.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+      contextMenu.style.padding = '5px';
+      contextMenu.style.zIndex = '1000';
+
+      document.body.appendChild(contextMenu);
+
+      document.addEventListener('click', () => {
+        if (contextMenu.parentNode) {
+          contextMenu.parentNode.removeChild(contextMenu);
+        }
+      }, { once: true });
     };
     container.appendChild(markElement);
   }

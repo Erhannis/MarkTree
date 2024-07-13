@@ -169,6 +169,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     createFolder(message.folderName, message.parentId);
   } else if (message.action === 'deleteFolder') {
     removeFolder(message.folderId);
+  } else if (message.action === 'deleteMark') {
+    removeMark(message.markId);
   }
 });
 
