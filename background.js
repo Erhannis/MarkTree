@@ -10,6 +10,7 @@ let marksTree = {
 };
 
 let tabsForNewMarks = new Set();
+let tabToFolderMap = {};
 
 // Utility functions to manage the marks tree
 function createMark(tab, folderId = "root") {
@@ -28,17 +29,18 @@ function createMark(tab, folderId = "root") {
 }
 
 function createNewMark(folderId = "root") {
-  console.log("createNewMark", folderId);
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
     tabsForNewMarks.add(newTab.id);
+    tabToFolderMap[newTab.id] = folderId;
   });
 }
 
 function handleTabUpdate(tabId, changeInfo, tab) {
-  console.log("handleTabUpdate", tabId, changeInfo, tab);
   if (tabsForNewMarks.has(tabId) && changeInfo.status === 'complete') {
-    createMark(tab, tab.folderId);
+    const folderId = tabToFolderMap[tabId] || 'root';
+    createMark(tab, folderId);
     tabsForNewMarks.delete(tabId);
+    delete tabToFolderMap[tabId];
   }
 }
 
