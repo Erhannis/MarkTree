@@ -3,13 +3,22 @@
 <head>
   <title>Tab Manager</title>
   <style>
-    /* Add your styles here */
+    .folder, .mark {
+      margin-left: 20px;
+      cursor: pointer;
+    }
+    .folder {
+      font-weight: bold;
+    }
+    .children {
+      margin-left: 20px;
+    }
   </style>
 </head>
 <body>
-  <div id="sidebar-content">
-    <!-- Tree structure for marks and folders -->
-  </div>
+  <div id="sidebar-content"></div>
+  <button id="new-folder">New Folder</button>
+  <button id="new-mark">New Mark</button>
   <script src="sidebar.js"></script>
 </body>
 </html>

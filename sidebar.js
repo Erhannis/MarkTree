@@ -4,26 +4,45 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadMarksTree() {
     browser.storage.local.get('marksTree').then(result => {
       if (result.marksTree) {
-        // Render the marks tree (implement this function)
         renderMarksTree(result.marksTree);
       }
     });
   }
 
   function renderMarksTree(tree) {
-    // Implement the tree rendering logic
     const container = document.getElementById('sidebar-content');
     container.innerHTML = ''; // Clear existing content
+    renderFolder(tree.folders['root'], container, tree);
+  }
 
-    // Create tree structure (this is a simple example)
-    Object.keys(tree.marks).forEach(tabId => {
-      const mark = tree.marks[tabId];
-      const markElement = document.createElement('div');
-      markElement.textContent = `${mark.title} (${mark.url})`;
-      container.appendChild(markElement);
+  function renderFolder(folder, container, tree) {
+    const folderElement = document.createElement('div');
+    folderElement.className = 'folder';
+    folderElement.textContent = folder.name;
+
+    const childrenContainer = document.createElement('div');
+    childrenContainer.className = 'children';
+
+    folder.children.forEach(childId => {
+      if (tree.folders[childId]) {
+        renderFolder(tree.folders[childId], childrenContainer, tree);
+      } else if (tree.marks[childId]) {
+        renderMark(tree.marks[childId], childrenContainer);
+      }
     });
 
-    // Add folder rendering logic similarly
+    folderElement.appendChild(childrenContainer);
+    container.appendChild(folderElement);
+  }
+
+  function renderMark(mark, container) {
+    const markElement = document.createElement('div');
+    markElement.className = 'mark';
+    markElement.textContent = `${mark.title} (${mark.url})`;
+    markElement.onclick = () => {
+      browser.tabs.update(mark.tabId, { active: true });
+    };
+    container.appendChild(markElement);
   }
 
   // Listen for messages from the background script
@@ -33,5 +52,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Add event listeners for creating, renaming, and removing marks/folders
+  document.getElementById('new-folder').onclick = () => {
+    const folderName = prompt('Enter folder name:');
+    if (folderName) {
+      createFolder(folderName);
+    }
+  };
+
+  document.getElementById('new-mark').onclick = () => {
+    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+      createMark(tabs[0]);
+    });
+  };
+
+  function createFolder(folderName, parentId = 'root') {
+    const folderId = `folder-${Date.now()}`;
+    const folder = {
+      id: folderId,
+      name: folderName,
+      children: []
+    };
+    marksTree.folders[folderId] = folder;
+    marksTree.folders[parentId].children.push(folderId);
+    saveMarksTree();
+    notifySidebar();
+  }
 });

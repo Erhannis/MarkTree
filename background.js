@@ -1,38 +1,78 @@
 let marksTree = {
-  folders: {},
+  folders: {
+    "root": {
+      name: "root",
+      children: []
+    }
+  },
   marks: {}
 };
 
 // Utility functions to manage the marks tree
-function createMark(tab) {
+function createMark(tab, folderId = "root") {
+  const markId = `mark-${tab.id}`;
   const mark = {
+    id: markId,
     title: tab.title,
     url: tab.url,
-    tabId: tab.id
+    tabId: tab.id,
+    folderId: folderId
   };
-  // Add mark to the marksTree (update this logic as needed)
-  marksTree.marks[tab.id] = mark;
+  // Add mark to the marksTree
+  marksTree.marks[markId] = mark;
+  marksTree.folders[folderId].children.push(markId);
   saveMarksTree();
   notifySidebar();
 }
 
-function updateMark(tabId, updateInfo) {
-  if (marksTree.marks[tabId]) {
-    if (updateInfo.title) {
-      marksTree.marks[tabId].title = updateInfo.title;
-    }
-    if (updateInfo.url) {
-      marksTree.marks[tabId].url = updateInfo.url;
-    }
+function removeMark(markId) {
+  const mark = marksTree.marks[markId];
+  if (mark) {
+    const folder = marksTree.folders[mark.folderId];
+    folder.children = folder.children.filter(id => id !== markId);
+    delete marksTree.marks[markId];
     saveMarksTree();
     notifySidebar();
   }
 }
 
-function removeMark(tabId) {
-  delete marksTree.marks[tabId];
+function createFolder(folderName, parentId = "root") {
+  const folderId = `folder-${Date.now()}`;
+  const folder = {
+    id: folderId,
+    name: folderName,
+    children: []
+  };
+  marksTree.folders[folderId] = folder;
+  marksTree.folders[parentId].children.push(folderId);
   saveMarksTree();
   notifySidebar();
+}
+
+function removeFolder(folderId) {
+  const folder = marksTree.folders[folderId];
+  if (folder && folder.children.length === 0) {
+    const parent = marksTree.folders[folder.parentId];
+    parent.children = parent.children.filter(id => id !== folderId);
+    delete marksTree.folders[folderId];
+    saveMarksTree();
+    notifySidebar();
+  }
+}
+
+function updateMark(tabId, updateInfo) {
+  const markId = `mark-${tabId}`;
+  const mark = marksTree.marks[markId];
+  if (mark) {
+    if (updateInfo.title) {
+      mark.title = updateInfo.title;
+    }
+    if (updateInfo.url) {
+      mark.url = updateInfo.url;
+    }
+    saveMarksTree();
+    notifySidebar();
+  }
 }
 
 function saveMarksTree() {
