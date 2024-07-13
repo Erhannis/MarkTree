@@ -32,6 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
     folderElement.textContent = folder.name;
     folderElement.oncontextmenu = (event) => {
       event.preventDefault();
+      event.stopPropagation();
+
+      // Remove any existing custom context menu
+      const existingMenu = document.querySelector('.context-menu');
+      if (existingMenu) {
+        existingMenu.remove();
+      }
+
       const folderId = folder.id;
       console.log("oncontextmenu: ", folderId);
       const contextMenu = document.createElement('div');
@@ -40,14 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
       addMarkOption.textContent = 'Add Mark';
       addMarkOption.onclick = () => {
         browser.runtime.sendMessage({ action: 'createMark', folderId: folderId });
-        document.body.removeChild(contextMenu);
+        contextMenu.remove();
       };
       contextMenu.appendChild(addMarkOption);
       contextMenu.style.position = 'absolute';
       contextMenu.style.top = `${event.clientY}px`;
       contextMenu.style.left = `${event.clientX}px`;
       document.body.appendChild(contextMenu);
-      
+
       document.addEventListener('click', () => {
         if (contextMenu.parentNode) {
           contextMenu.parentNode.removeChild(contextMenu);
