@@ -1,0 +1,37 @@
+{
+  "manifest_version": 2,
+  "name": "Tab Manager",
+  "version": "1.0",
+  "permissions": [
+    "tabs",
+    "storage",
+    "contextMenus"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "sidebar_action": {
+    "default_title": "Tab Manager",
+    "default_panel": "sidebar.html"
+  },
+  "commands": {
+    "new_mark": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+M"
+      },
+      "description": "Create a new mark"
+    },
+    "close_mark": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+C"
+      },
+      "description": "Close the current tab and remove the mark"
+    }
+  },
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icons/icon.png"
+    }
+  }
+}
