@@ -41,19 +41,37 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const folderId = folder.id;
-      console.log("oncontextmenu: ", folderId);
       const contextMenu = document.createElement('div');
       contextMenu.className = 'context-menu';
+
       const addMarkOption = document.createElement('div');
-      addMarkOption.textContent = 'Add Mark';
+      addMarkOption.textContent = 'New Mark';
       addMarkOption.onclick = () => {
         browser.runtime.sendMessage({ action: 'createMark', folderId: folderId });
         contextMenu.remove();
       };
       contextMenu.appendChild(addMarkOption);
+
+      const addFolderOption = document.createElement('div');
+      addFolderOption.textContent = 'New Folder';
+      addFolderOption.onclick = () => {
+        const folderName = prompt('Enter folder name:');
+        if (folderName) {
+          browser.runtime.sendMessage({ action: 'createFolder', folderName: folderName, parentId: folderId });
+        }
+        contextMenu.remove();
+      };
+      contextMenu.appendChild(addFolderOption);
+
       contextMenu.style.position = 'absolute';
       contextMenu.style.top = `${event.clientY}px`;
       contextMenu.style.left = `${event.clientX}px`;
+      contextMenu.style.background = 'white';
+      contextMenu.style.border = '1px solid #ccc';
+      contextMenu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+      contextMenu.style.padding = '5px';
+      contextMenu.style.zIndex = '1000';
+
       document.body.appendChild(contextMenu);
 
       document.addEventListener('click', () => {

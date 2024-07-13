@@ -1,6 +1,7 @@
 let marksTree = {
   folders: {
     "root": {
+      id: "root",
       name: "root",
       children: []
     }
@@ -10,7 +11,7 @@ let marksTree = {
 
 // Utility functions to manage the marks tree
 function createMark(tab, folderId = "root") {
-  const markId = `mark-${tab.id}`;
+  const markId = `mark-${Date.now()}`;
   const mark = {
     id: markId,
     title: tab.title,
@@ -18,11 +19,21 @@ function createMark(tab, folderId = "root") {
     tabId: tab.id,
     folderId: folderId
   };
-  // Add mark to the marksTree
   marksTree.marks[markId] = mark;
   marksTree.folders[folderId].children.push(markId);
   saveMarksTree();
   notifySidebar();
+}
+
+function createNewMark(folderId = "root") {
+  browser.tabs.create({ url: 'about:blank' }).then(newTab => {
+    browser.tabs.onUpdated.addListener(function listener(tabId, changeInfo, tab) {
+      if (tabId === newTab.id && changeInfo.status === 'complete') {
+        createMark(tab, folderId);
+        browser.tabs.onUpdated.removeListener(listener);
+      }
+    });
+  });
 }
 
 function removeMark(markId) {
@@ -61,7 +72,7 @@ function removeFolder(folderId) {
 }
 
 function updateMark(tabId, updateInfo) {
-  const markId = `mark-${tabId}`;
+  const markId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tabId);
   const mark = marksTree.marks[markId];
   if (mark) {
     if (updateInfo.title) {
@@ -94,8 +105,7 @@ function notifySidebar() {
 browser.commands.onCommand.addListener(command => {
   if (command === 'new_mark') {
     browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      createMark(tabs[0]);
-      browser.tabs.create({ url: 'about:blank' });
+      createNewMark('root');
     });
   } else if (command === 'close_mark') {
     browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
@@ -138,9 +148,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
 // Listen for messages from sidebar
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'createMark') {
-    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      createMark(tabs[0], message.folderId);
-    });
+    createNewMark(message.folderId);
   } else if (message.action === 'createFolder') {
     createFolder(message.folderName, message.parentId);
   }
