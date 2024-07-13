@@ -1,12 +1,16 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Tab Manager",
   "version": "1.0",
   "description": "A Firefox extension to manage tabs and marks",
   "permissions": [
     "tabs",
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "background": {
     "scripts": ["background.js"]
@@ -18,13 +22,13 @@
   "commands": {
     "new_mark": {
       "suggested_key": {
-        "default": "Ctrl+Shift+M"
+        "default": "Ctrl+Shift+L"
       },
       "description": "Create a new mark"
     },
     "close_mark": {
       "suggested_key": {
-        "default": "Ctrl+Shift+W"
+        "default": "Ctrl+Y"
       },
       "description": "Close the current mark"
     },
@@ -35,7 +39,7 @@
       "description": "Create a new tab with a mark"
     }
   },
-  "browser_action": {
+  "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "48": "icons/icon.png"
