@@ -28,16 +28,18 @@ function createMark(tab, folderId = "root") {
 }
 
 function createNewMark(folderId = "root") {
+  console.log("createNewMark", folderId);
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
     tabsForNewMarks.add(newTab.id);
-    browser.tabs.onUpdated.addListener(function listener(tabId, changeInfo, tab) {
-      if (tabId === newTab.id && changeInfo.status === 'complete') {
-        createMark(tab, folderId);
-        browser.tabs.onUpdated.removeListener(listener);
-        tabsForNewMarks.delete(tabId);
-      }
-    });
   });
+}
+
+function handleTabUpdate(tabId, changeInfo, tab) {
+  console.log("handleTabUpdate", tabId, changeInfo, tab);
+  if (tabsForNewMarks.has(tabId) && changeInfo.status === 'complete') {
+    createMark(tab, tab.folderId);
+    tabsForNewMarks.delete(tabId);
+  }
 }
 
 function removeMark(markId) {
@@ -118,9 +120,7 @@ function notifySidebar() {
 
 browser.commands.onCommand.addListener(command => {
   if (command === 'new_mark') {
-    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      createNewMark('root');
-    });
+    createNewMark('root');
   } else if (command === 'close_mark') {
     browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
       const tabId = tabs[0].id;
@@ -130,10 +130,8 @@ browser.commands.onCommand.addListener(command => {
   }
 });
 
-browser.tabs.onCreated.addListener(tab => {
-  if (!tabsForNewMarks.has(tab.id)) {
-    createMark(tab);
-  }
+browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  handleTabUpdate(tabId, changeInfo, tab);
 });
 
 browser.tabs.onRemoved.addListener(tabId => {
