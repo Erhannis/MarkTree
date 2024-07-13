@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('sidebar-content');
     container.innerHTML = ''; // Clear existing content
     renderFolder(tree.folders['root'], container, tree);
+    // Add the spacer element
+    const spacer = document.createElement('div');
+    spacer.className = 'spacer';
+    container.appendChild(spacer);
   }
 
   function renderFolder(folder, container, tree) {

@@ -1,48 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tab Manager</title>
   <style>
     #sidebar-content {
       overflow-y: auto;
       max-height: 100vh;
-      white-space: nowrap;
     }
     .folder, .mark {
-      margin-left: 20px;
+      padding: 5px;
       cursor: pointer;
     }
-    .folder {
-      font-weight: bold;
-      color: blue;
-    }
-    .mark {
-      color: black;
-    }
-    .children {
-      margin-left: 20px;
+    .folder.selected, .mark.selected {
+      background-color: lightgray;
     }
     .context-menu {
       background: white;
       border: 1px solid #ccc;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
       padding: 5px;
-      position: absolute;
       z-index: 1000;
     }
-    .context-menu div {
-      padding: 5px;
-      cursor: pointer;
-    }
-    .context-menu div:hover {
-      background: #eee;
+    /* Add space at the bottom of the tree */
+    .spacer {
+      height: 20px;
     }
   </style>
 </head>
 <body>
-  <div id="sidebar-content"></div>
-  <button id="new-folder">New Folder</button>
-  <button id="new-mark">New Mark</button>
+  <div id="controls">
+    <button id="new-folder">New Folder</button>
+    <button id="new-mark">New Mark</button>
+  </div>
+  <div id="sidebar-content">
+    <!-- Tree will be rendered here -->
+    <div class="spacer"></div>
+  </div>
   <script src="sidebar.js"></script>
 </body>
 </html>
