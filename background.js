@@ -129,7 +129,7 @@ function updateMark(tabId, updateInfo) {
 
 function moveItem(draggedId, targetFolderId) {
   console.log('Move item', draggedId, targetFolderId);
-  if (isDescendant(draggedId, targetFolderId)) {
+  if (isDescendant(targetFolderId, draggedId)) {
     console.error('Cannot move folder into one of its descendants');
     return;
   }
