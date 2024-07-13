@@ -1,2 +1,4 @@
 Disable browser.tabs.onRemoved
 Collapse folders
+ctrl-y on non-mark should still close
+style suddenly changed??

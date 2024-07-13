@@ -34,10 +34,7 @@ function createNewMark(folderId = "root") {
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
     tabsForNewMarks.add(newTab.id);
     tabToFolderMap[newTab.id] = folderId;
-    // Focus the address bar of the new tab
-    browser.tabs.update(newTab.id, { active: true }).then(() => {
-      browser.tabs.executeScript(newTab.id, { code: 'document.getElementById("urlbar").focus();' });
-    });
+    //RAINY Focus the address bar of the new tab
   });
 }
 
