@@ -179,7 +179,20 @@ function openFolderInNewWindow(folderId) {
     const urls = folder.children
       .filter(id => marksTree.marks[id])
       .map(id => marksTree.marks[id].url);
-    browser.windows.create({ url: urls });
+    browser.windows.create({ url: urls }).then(window => {
+      const newWindowId = window.id;
+      browser.tabs.query({ windowId: newWindowId }).then(tabs => {
+        console.log("browser.tabs.query", newWindowId, tabs);
+        tabs.forEach((tab, index) => {
+          const markId = folder.children[index];
+          if (marksTree.marks[markId]) {
+            marksTree.marks[markId].tabId = tab.id;
+          }
+        });
+        saveMarksTree();
+        notifySidebar();
+      });
+    });
   }
 }
 
