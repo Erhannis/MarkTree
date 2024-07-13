@@ -14,9 +14,28 @@
     }
     .folder {
       font-weight: bold;
+      color: blue;
+    }
+    .mark {
+      color: black;
     }
     .children {
       margin-left: 20px;
+    }
+    .context-menu {
+      background: white;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      padding: 5px;
+      position: absolute;
+      z-index: 1000;
+    }
+    .context-menu div {
+      padding: 5px;
+      cursor: pointer;
+    }
+    .context-menu div:hover {
+      background: #eee;
     }
   </style>
 </head>
