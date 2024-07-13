@@ -66,10 +66,19 @@ function createFolder(folderName, parentId = "root") {
 
 function removeFolder(folderId) {
   const folder = marksTree.folders[folderId];
-  if (folder && folder.children.length === 0) {
+  if (folder) {
+    folder.children.forEach(childId => {
+      if (marksTree.folders[childId]) {
+        removeFolder(childId);
+      } else if (marksTree.marks[childId]) {
+        removeMark(childId);
+      }
+    });
     const parent = marksTree.folders[folder.parentId];
     parent.children = parent.children.filter(id => id !== folderId);
-    delete marksTree.folders[folderId];
+    if (folderId != "root") {
+      delete marksTree.folders[folderId];
+    }
     saveMarksTree();
     notifySidebar();
   }
@@ -157,6 +166,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     createNewMark(message.folderId);
   } else if (message.action === 'createFolder') {
     createFolder(message.folderName, message.parentId);
+  } else if (message.action === 'deleteFolder') {
+    removeFolder(message.folderId);
   }
 });
 

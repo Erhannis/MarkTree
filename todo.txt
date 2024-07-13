@@ -1,1 +1,2 @@
 Disable browser.tabs.onRemoved
+Collapse folders

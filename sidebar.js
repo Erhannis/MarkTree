@@ -63,12 +63,22 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       contextMenu.appendChild(addFolderOption);
 
+      const deleteFolderOption = document.createElement('div');
+      deleteFolderOption.textContent = 'Delete Folder';
+      deleteFolderOption.onclick = () => {
+        if (folderId !== 'root' && confirm('Are you sure you want to delete this folder and all its contents?')) {
+          browser.runtime.sendMessage({ action: 'deleteFolder', folderId: folderId });
+        }
+        contextMenu.remove();
+      };
+      contextMenu.appendChild(deleteFolderOption);
+
       contextMenu.style.position = 'absolute';
       contextMenu.style.top = `${event.clientY}px`;
       contextMenu.style.left = `${event.clientX}px`;
       contextMenu.style.background = 'white';
       contextMenu.style.border = '1px solid #ccc';
-      contextMenu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+      contextMenu.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
       contextMenu.style.padding = '5px';
       contextMenu.style.zIndex = '1000';
 
