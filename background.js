@@ -14,6 +14,7 @@ let tabToFolderMap = {};
 
 // Utility functions to manage the marks tree
 function createMark(tab, folderId = "root") {
+  console.log("createMark", tab, folderId);
   const markId = `mark-${Date.now()}`;
   const mark = {
     id: markId,
@@ -29,6 +30,7 @@ function createMark(tab, folderId = "root") {
 }
 
 function createNewMark(folderId = "root") {
+  console.log("createNewMark", folderId);
   browser.tabs.create({ url: 'about:blank' }).then(newTab => {
     tabsForNewMarks.add(newTab.id);
     tabToFolderMap[newTab.id] = folderId;
@@ -36,6 +38,7 @@ function createNewMark(folderId = "root") {
 }
 
 function handleTabUpdate(tabId, changeInfo, tab) {
+  console.log("handleTabUpdate", tabId, changeInfo, tab);
   if (changeInfo.status === 'complete') {
     if (tabsForNewMarks.has(tabId)) {
       const folderId = tabToFolderMap[tabId] || 'root';
@@ -54,6 +57,7 @@ function handleTabUpdate(tabId, changeInfo, tab) {
 }
 
 function removeMark(markId) {
+  console.log("removeMark", markId);
   const mark = marksTree.marks[markId];
   if (mark) {
     const folder = marksTree.folders[mark.folderId];
@@ -65,6 +69,7 @@ function removeMark(markId) {
 }
 
 function createFolder(folderName, parentId = "root") {
+  console.log("createFolder", folderName, parentId);
   const folderId = `folder-${Date.now()}`;
   const folder = {
     id: folderId,
@@ -79,6 +84,7 @@ function createFolder(folderName, parentId = "root") {
 }
 
 function removeFolder(folderId) {
+  console.log("removeFolder", folderId);
   const folder = marksTree.folders[folderId];
   if (folder) {
     folder.children.forEach(childId => {
@@ -99,6 +105,7 @@ function removeFolder(folderId) {
 }
 
 function updateMark(tabId, updateInfo) {
+  console.log("updateMark", tabId, updateInfo);
   const markId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tabId);
   const mark = marksTree.marks[markId];
   if (mark) {
@@ -114,10 +121,12 @@ function updateMark(tabId, updateInfo) {
 }
 
 function saveMarksTree() {
+  console.log("saveMarksTree");
   browser.storage.local.set({ marksTree });
 }
 
 function loadMarksTree() {
+  console.log("loadMarksTree");
   browser.storage.local.get('marksTree').then(result => {
     if (result.marksTree) {
       marksTree = result.marksTree;
@@ -126,10 +135,12 @@ function loadMarksTree() {
 }
 
 function notifySidebar() {
+  console.log("notifySidebar");
   browser.runtime.sendMessage({ action: 'updateMarks' });
 }
 
 browser.commands.onCommand.addListener(command => {
+  console.log("onCommand", command);
   if (command === 'new_mark') {
     createNewMark('root');
   } else if (command === 'close_mark') {
@@ -146,6 +157,7 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 browser.tabs.onRemoved.addListener(tabId => {
+  console.log("onRemoved", tabId);
   removeMark(`mark-${tabId}`);
 });
 
@@ -157,6 +169,7 @@ browser.contextMenus.create({
 });
 
 browser.contextMenus.onClicked.addListener((info, tab) => {
+  console.log("contextMenus.onClicked", info, tab);
   if (info.menuItemId === "open-with-mark") {
     browser.tabs.create({ url: info.linkUrl }).then(newTab => {
       createMark(newTab);
@@ -166,6 +179,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
 
 // Listen for messages from sidebar
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("onMessage", message);
   if (message.action === 'createMark') {
     createNewMark(message.folderId);
   } else if (message.action === 'createFolder') {
