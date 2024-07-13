@@ -66,12 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const deleteOption = document.createElement('div');
       deleteOption.textContent = 'Delete';
       deleteOption.onclick = () => {
-        if (folderId !== 'root') {
-          if (confirm('Are you sure you want to delete this folder and all its contents?')) {
-            browser.runtime.sendMessage({ action: 'deleteFolder', folderId: folderId });
-          }
-        } else {
-          alert('Cannot delete the root folder.');
+        if (confirm('Are you sure you want to delete this folder and all its contents?')) {
+          browser.runtime.sendMessage({ action: 'deleteFolder', folderId: folderId });
         }
         contextMenu.remove();
       };
