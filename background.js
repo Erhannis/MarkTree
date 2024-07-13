@@ -127,6 +127,41 @@ function updateMark(tabId, updateInfo) {
   }
 }
 
+function moveItem(draggedId, targetFolderId) {
+  console.log('Move item', draggedId, targetFolderId);
+  if (isDescendant(draggedId, targetFolderId)) {
+    console.error('Cannot move folder into one of its descendants');
+    return;
+  }
+  if (marksTree.folders[draggedId]) {
+    const folder = marksTree.folders[draggedId];
+    const parentFolder = marksTree.folders[folder.parentId];
+    parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
+    folder.parentId = targetFolderId;
+    marksTree.folders[targetFolderId].children.push(draggedId);
+  } else if (marksTree.marks[draggedId]) {
+    const mark = marksTree.marks[draggedId];
+    const parentFolder = marksTree.folders[mark.folderId];
+    parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
+    mark.folderId = targetFolderId;
+    marksTree.folders[targetFolderId].children.push(draggedId);
+  }
+  saveMarksTree();
+  notifySidebar();
+}
+
+function isDescendant(childId, parentId) {
+  console.log('Is descendant', childId, parentId);
+  if (childId === parentId) {
+    return true;
+  }
+  const folder = marksTree.folders[childId];
+  if (folder && folder.parentId) {
+    return isDescendant(folder.parentId, parentId);
+  }
+  return false;
+}
+
 function saveMarksTree() {
   console.log("saveMarksTree");
   browser.storage.local.set({ marksTree });
@@ -210,6 +245,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     removeFolder(message.folderId);
   } else if (message.action === 'deleteMark') {
     removeMark(message.markId);
+  } else if (message.action === 'moveItem') {
+    moveItem(message.draggedId, message.targetFolderId);
   }
 });
 

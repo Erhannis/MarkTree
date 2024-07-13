@@ -72,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       const draggedId = event.dataTransfer.getData('text/plain');
       console.log('Folder drop', folder.id, draggedId);
-      if (draggedId && draggedId !== folder.id && !isDescendant(draggedId, folder.id, tree)) {
-        moveItem(draggedId, folder.id, tree);
+      if (draggedId && draggedId !== folder.id) {
+        browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: folder.id });
       }
       event.stopPropagation();
     };
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const draggedId = event.dataTransfer.getData('text/plain');
       console.log('Mark drop', mark.id, draggedId);
       if (draggedId && draggedId !== mark.id) {
-        moveItem(draggedId, mark.folderId, tree);
+        browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: mark.folderId });
       }
       event.stopPropagation();
     };
@@ -255,47 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
         contextMenu.parentNode.removeChild(contextMenu);
       }
     }, { once: true });
-  }
-
-  function moveItem(draggedId, targetFolderId, tree) {
-    console.log('Move item', draggedId, targetFolderId);
-    if (tree.folders[draggedId]) {
-      const folder = tree.folders[draggedId];
-      const parentFolder = tree.folders[folder.parentId];
-      parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
-      folder.parentId = targetFolderId;
-      tree.folders[targetFolderId].children.push(draggedId);
-    } else if (tree.marks[draggedId]) {
-      const mark = tree.marks[draggedId];
-      const parentFolder = tree.folders[mark.folderId];
-      parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
-      mark.folderId = targetFolderId;
-      tree.folders[targetFolderId].children.push(draggedId);
-    }
-    saveMarksTree(tree);
-    notifySidebar();
-  }
-
-  function isDescendant(childId, parentId, tree) {
-    console.log('Is descendant', childId, parentId);
-    if (childId === parentId) {
-      return true;
-    }
-    const folder = tree.folders[childId];
-    if (folder && folder.parentId) {
-      return isDescendant(folder.parentId, parentId, tree);
-    }
-    return false;
-  }
-
-  function saveMarksTree(tree) {
-    console.log("saveMarksTree", tree);
-    browser.storage.local.set({ marksTree: tree });
-  }
-
-  function notifySidebar() {
-    console.log("notifySidebar");
-    browser.runtime.sendMessage({ action: 'updateMarks' });
   }
 
   // Listen for key presses to delete selected items
