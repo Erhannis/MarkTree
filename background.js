@@ -49,14 +49,19 @@ function handleTabUpdate(tabId, changeInfo, tab) {
       createMark(tab, folderId);
       tabsForNewMarks.delete(tabId);
       delete tabToFolderMap[tabId];
-    } else {
-      browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
-        const activeTab = activeTabs[0];
-        const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
-        const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
-        createMark(tab, folderId);
-      });
     }
+  }
+}
+
+function handleTabCreated(tab) {
+  console.log("handleTabCreated", tab);
+  if (!tabsForNewMarks.has(tab.id)) {
+    browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
+      const activeTab = activeTabs[0];
+      const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
+      const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
+      createMark(tab, folderId);
+    });
   }
 }
 
@@ -152,6 +157,13 @@ browser.commands.onCommand.addListener(command => {
       const tabId = tabs[0].id;
       browser.tabs.remove(tabId);
       removeMark(`mark-${tabId}`);
+    });
+  } else if (command === 'new_tab_with_mark') {
+    browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
+      const activeTab = activeTabs[0];
+      const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
+      const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
+      createNewMark(folderId);
     });
   }
 });

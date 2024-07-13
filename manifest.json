@@ -2,6 +2,7 @@
   "manifest_version": 2,
   "name": "Tab Manager",
   "version": "1.0",
+  "description": "A Firefox extension to manage tabs and marks",
   "permissions": [
     "tabs",
     "storage",
@@ -23,9 +24,15 @@
     },
     "close_mark": {
       "suggested_key": {
-        "default": "Ctrl+Shift+C"
+        "default": "Ctrl+Shift+W"
       },
-      "description": "Close the current tab and remove the mark"
+      "description": "Close the current mark"
+    },
+    "new_tab_with_mark": {
+      "suggested_key": {
+        "default": "Alt+N"
+      },
+      "description": "Create a new tab with a mark"
     }
   },
   "browser_action": {
