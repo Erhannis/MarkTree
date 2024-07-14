@@ -69,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
     folderElement.ondragstart = (event) => {
       console.log('Folder drag started', folder.id);
       event.dataTransfer.setData('text/plain', folder.id);
+      if (selectedItems.size > 1) {
+        event.dataTransfer.setData('application/x-moz-node', JSON.stringify(Array.from(selectedItems)));
+      }
       event.stopPropagation();
     };
 
@@ -80,10 +83,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     folderElement.ondrop = (event) => {
       event.preventDefault();
-      const draggedId = event.dataTransfer.getData('text/plain');
-      console.log('Folder drop', folder.id, draggedId);
-      if (draggedId && draggedId !== folder.id) {
-        browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: folder.id });
+      let draggedIds = event.dataTransfer.getData('application/x-moz-node');
+      if (draggedIds) {
+        draggedIds = JSON.parse(draggedIds);
+        console.log('Folder drop multiple', folder.id, draggedIds);
+        draggedIds.forEach(draggedId => {
+          if (draggedId && draggedId !== folder.id) {
+            browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: folder.id });
+          }
+        });
+      } else {
+        const draggedId = event.dataTransfer.getData('text/plain');
+        console.log('Folder drop single', folder.id, draggedId);
+        if (draggedId && draggedId !== folder.id) {
+          browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: folder.id });
+        }
       }
       event.stopPropagation();
     };
@@ -140,6 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
     markElement.ondragstart = (event) => {
       console.log('Mark drag started', mark.id);
       event.dataTransfer.setData('text/plain', mark.id);
+      if (selectedItems.size > 1) {
+        event.dataTransfer.setData('application/x-moz-node', JSON.stringify(Array.from(selectedItems)));
+      }
       event.stopPropagation();
     };
 
@@ -151,10 +168,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     markElement.ondrop = (event) => {
       event.preventDefault();
-      const draggedId = event.dataTransfer.getData('text/plain');
-      console.log('Mark drop', mark.id, draggedId);
-      if (draggedId && draggedId !== mark.id) {
-        browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: mark.folderId });
+      let draggedIds = event.dataTransfer.getData('application/x-moz-node');
+      if (draggedIds) {
+        draggedIds = JSON.parse(draggedIds);
+        console.log('Mark drop multiple', mark.id, draggedIds);
+        draggedIds.forEach(draggedId => {
+          if (draggedId && draggedId !== mark.id) {
+            browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: mark.folderId });
+          }
+        });
+      } else {
+        const draggedId = event.dataTransfer.getData('text/plain');
+        console.log('Mark drop single', mark.id, draggedId);
+        if (draggedId && draggedId !== mark.id) {
+          browser.runtime.sendMessage({ action: 'moveItem', draggedId: draggedId, targetFolderId: mark.folderId });
+        }
       }
       event.stopPropagation();
     };
