@@ -219,43 +219,52 @@ document.addEventListener('DOMContentLoaded', () => {
     let startItem = allItems[startIndex];
     let endItem = allItems[endIndex];
 
-    const parentChain = (chain, element) => {
-      chain.push(element);
-      let parent = element.closest('.folder');
-      if (parent) {
-        chain = parentChain(chain, parent);
-      }
-      return chain;
+    const parentChain = (element) => {
+        let chain = [];
+        while (element) {
+            chain.push(element);
+            element = element.parentNode.closest('.folder');
+        }
+        return chain;
     };
 
-    let firstChain = parentChain([], document.querySelector(`[data-id="${startItem}"]`));
-    let lastChain = parentChain([], document.querySelector(`[data-id="${endItem}"]`));
+    let firstChain = parentChain(document.querySelector(`[data-id="${startItem.dataset.id}"]`));
+    let lastChain = parentChain(document.querySelector(`[data-id="${endItem.dataset.id}"]`));
 
-
-    
-    const firstParent = parentFolder();
-    const lastParent = parentFolder(document.querySelector(`[data-id="${endItem}"]`));
-
-    if (firstParent !== lastParent) {
-      const parentFolderId = (element) => {
-        const parent = element.closest('.folder');
-        return parent ? parent.dataset.id : 'root';
-      };
-
-      const firstParentId = parentFolderId(document.querySelector(`[data-id="${firstSelected}"]`));
-      const lastParentId = parentFolderId(document.querySelector(`[data-id="${targetId}"]`));
-
-      if (firstParentId !== lastParentId) {
-        clearSelection();
-        selectItem(document.querySelector(`[data-id="${firstParentId}"]`));
-        selectItem(document.querySelector(`[data-id="${lastParentId}"]`));
-        return;
-      }
+    // Find the common ancestor
+    let commonAncestor = null;
+    for (let item of firstChain) {
+        if (lastChain.includes(item)) {
+            commonAncestor = item;
+            break;
+        }
     }
 
+    // If no common ancestor found, use root
+    if (!commonAncestor) {
+        commonAncestor = document.querySelector('[data-id="root"]');
+    }
+
+    // Collect all items between the range
+    let rangeItems = [];
+    let withinRange = false;
+
+    for (let i = 0; i < allItems.length; i++) {
+        let element = allItems[i];
+        if (element === startItem || element === endItem) {
+            withinRange = !withinRange;
+            rangeItems.push(element);
+        } else if (withinRange) {
+            rangeItems.push(element);
+        }
+    }
+
+    // Select all items within the range and under the common ancestor
     clearSelection();
-    for (let i = startIndex; i <= endIndex; i++) {
-      selectItem(allItems[i]);
+    for (let item of rangeItems) {
+        if (item.parentNode.closest('.folder') === commonAncestor) {
+            selectItem(item);
+        }
     }
   }
 
