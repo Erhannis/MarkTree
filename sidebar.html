@@ -5,10 +5,12 @@
     #sidebar-content {
       overflow-y: auto;
       max-height: 100vh;
+      overflow-x: auto; /* Ensure horizontal scrollbar if needed */
     }
     .folder, .mark {
       padding: 5px;
       cursor: pointer;
+      white-space: nowrap; /* Prevent wrapping */
     }
     .folder {
       font-weight: bold;

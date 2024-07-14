@@ -129,25 +129,27 @@ function updateMark(tabId, updateInfo) {
   }
 }
 
-function moveItem(draggedId, targetFolderId) {
-  console.log('Move item', draggedId, targetFolderId);
-  if (isDescendant(targetFolderId, draggedId)) {
-    console.error('Cannot move folder into one of its descendants');
-    return;
-  }
-  if (marksTree.folders[draggedId]) {
-    const folder = marksTree.folders[draggedId];
-    const parentFolder = marksTree.folders[folder.parentId];
-    parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
-    folder.parentId = targetFolderId;
-    marksTree.folders[targetFolderId].children.push(draggedId);
-  } else if (marksTree.marks[draggedId]) {
-    const mark = marksTree.marks[draggedId];
-    const parentFolder = marksTree.folders[mark.folderId];
-    parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
-    mark.folderId = targetFolderId;
-    marksTree.folders[targetFolderId].children.push(draggedId);
-  }
+function moveItems(draggedIds, targetFolderId) {
+  console.log('Move items', draggedIds, targetFolderId);
+  draggedIds.forEach(draggedId => {
+    if (isDescendant(targetFolderId, draggedId)) {
+      console.error('Cannot move folder into one of its descendants');
+      return;
+    }
+    if (marksTree.folders[draggedId]) {
+      const folder = marksTree.folders[draggedId];
+      const parentFolder = marksTree.folders[folder.parentId];
+      parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
+      folder.parentId = targetFolderId;
+      marksTree.folders[targetFolderId].children.push(draggedId);
+    } else if (marksTree.marks[draggedId]) {
+      const mark = marksTree.marks[draggedId];
+      const parentFolder = marksTree.folders[mark.folderId];
+      parentFolder.children = parentFolder.children.filter(id => id !== draggedId);
+      mark.folderId = targetFolderId;
+      marksTree.folders[targetFolderId].children.push(draggedId);
+    }
+  });
   saveMarksTree();
   notifySidebar();
 }
@@ -288,8 +290,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     removeFolder(message.folderId);
   } else if (message.action === 'deleteMark') {
     removeMark(message.markId);
-  } else if (message.action === 'moveItem') {
-    moveItem(message.draggedId, message.targetFolderId);
+  } else if (message.action === 'moveItems') {
+    moveItems(message.draggedIds, message.targetFolderId);
   } else if (message.action === 'toggleFolderCollapse') {
     toggleFolderCollapse(message.folderId);
   } else if (message.action === 'openFolderInNewWindow') {
