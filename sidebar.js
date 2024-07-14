@@ -15,6 +15,46 @@ document.addEventListener('DOMContentLoaded', () => {
     browser.runtime.sendMessage({ action: 'createMark', folderId: 'root' });
   };
 
+  document.getElementById('download-tree').onclick = () => {
+    console.log('Downloading marks tree');
+    browser.storage.local.get('marksTree').then(result => {
+      if (result.marksTree) {
+        const blob = new Blob([JSON.stringify(result.marksTree, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'marksTree.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    });
+  };
+
+  document.getElementById('upload-tree-btn').onclick = () => {
+    document.getElementById('upload-tree').click();
+  };
+
+  document.getElementById('upload-tree').onchange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const newTree = JSON.parse(e.target.result);
+          console.log('Uploading marks tree', newTree);
+          browser.storage.local.set({ marksTree: newTree }).then(() => {
+            loadMarksTree();
+            browser.runtime.sendMessage({ action: 'updateMarks' });
+          });
+        } catch (error) {
+          console.error('Error parsing JSON file', error);
+          alert('Failed to upload the marks tree. Please ensure the file is a valid JSON.');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
   let selectedItems = new Set();
   let currentTree = null; // Define a global variable to hold the current tree state
 
@@ -167,16 +207,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     markElement.ondblclick = () => {
-      console.log('Mark double clicked', mark.id);
+      console.log('Mark double-clicked', mark.id);
       browser.tabs.query({}).then(tabs => {
         const existingTab = tabs.find(tab => tab.id === mark.tabId);
         if (existingTab) {
-          browser.tabs.update(existingTab.id, { active: true });
+          console.log('Focusing existing tab', mark.tabId);
+          browser.tabs.update(mark.tabId, { active: true });
         } else {
+          console.log('Opening new tab for mark', mark.url);
           browser.tabs.create({ url: mark.url }).then(newTab => {
             mark.tabId = newTab.id;
-            browser.runtime.sendMessage({ action: 'updateMark', markId: mark.id, tabId: newTab.id });
-            saveMarksTree();
+            browser.runtime.sendMessage({ action: 'updateMark', tabId: newTab.id, updateInfo: { url: mark.url, title: mark.title } });
           });
         }
       });

@@ -290,6 +290,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     removeFolder(message.folderId);
   } else if (message.action === 'deleteMark') {
     removeMark(message.markId);
+  } else if (message.action === 'updateMark') {
+    updateMark(message.markId);
   } else if (message.action === 'moveItems') {
     moveItems(message.draggedIds, message.targetFolderId);
   } else if (message.action === 'toggleFolderCollapse') {
