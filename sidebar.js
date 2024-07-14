@@ -166,6 +166,22 @@ document.addEventListener('DOMContentLoaded', () => {
       showContextMenu(event, mark.id, false);
     };
 
+    markElement.ondblclick = () => {
+      console.log('Mark double clicked', mark.id);
+      browser.tabs.query({}).then(tabs => {
+        const existingTab = tabs.find(tab => tab.id === mark.tabId);
+        if (existingTab) {
+          browser.tabs.update(existingTab.id, { active: true });
+        } else {
+          browser.tabs.create({ url: mark.url }).then(newTab => {
+            mark.tabId = newTab.id;
+            browser.runtime.sendMessage({ action: 'updateMark', markId: mark.id, tabId: newTab.id });
+            saveMarksTree();
+          });
+        }
+      });
+    };
+
     container.appendChild(markElement);
   }
 
