@@ -5,3 +5,4 @@ drag items
 ctrl-y on non-mark should still close
 right click on selection
 convert window into folder
+show which marks have open tabs

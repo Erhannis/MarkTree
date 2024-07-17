@@ -244,13 +244,6 @@ browser.commands.onCommand.addListener(command => {
       }
       browser.tabs.remove(tabId);
     });
-  } else if (command === 'new_tab_with_mark') {
-    browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
-      const activeTab = activeTabs[0];
-      const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
-      const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
-      createNewMark(folderId);
-    });
   }
 });
 

@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Tab Manager",
+  "name": "MarkTree",
   "version": "1.0",
-  "description": "A Firefox extension to manage tabs and marks",
+  "description": "For organizing and preserving tabs indefinitely across sessions.  Each new tab gets a mark, which you can organize into trees.",
   "permissions": [
     "tabs",
     "storage",
@@ -12,7 +12,7 @@
     "scripts": ["background.js"]
   },
   "sidebar_action": {
-    "default_title": "Tab Manager",
+    "default_title": "MarkTree",
     "default_panel": "sidebar.html"
   },
   "commands": {
@@ -26,19 +26,13 @@
       "suggested_key": {
         "default": "Ctrl+Y"
       },
-      "description": "Close the current mark"
-    },
-    "new_tab_with_mark": {
-      "suggested_key": {
-        "default": "Alt+N"
-      },
-      "description": "Create a new tab with a mark"
+      "description": "Delete the current tab and its mark"
     }
   },
   "browser_action": {
     "default_icon": {
       "48": "icons/icon.png"
     },
-    "default_title": "Open Tab Manager Sidebar"
+    "default_title": "Open MarkTree Sidebar"
   }
 }
