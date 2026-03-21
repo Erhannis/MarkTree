@@ -6,7 +6,8 @@
   "permissions": [
     "tabs",
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "sessions"
   ],
   "background": {
     "scripts": ["background.js"]

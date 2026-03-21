@@ -316,6 +316,10 @@ browser.commands.onCommand.addListener(command => {
 // FIX BUG-4: queue events that arrive before loadMarksTree() resolves to prevent
 //            them from saving an empty tree and wiping stored data.
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // DIAG: log every onUpdated firing so we can see the event order
+  console.log("[DIAG onUpdated]", tabId, JSON.stringify(changeInfo),
+    `discarded=${tab.discarded} status=${tab.status} url=${tab.url}`);
+
   if (!treeLoaded) {
     if (changeInfo.status === 'complete') {
       pendingTabUpdates.push([tabId, changeInfo, tab]);
@@ -323,6 +327,30 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     return;
   }
   handleTabUpdate(tabId, changeInfo, tab);
+});
+
+// DIAG: log onCreated to observe tab state and any existing session markId
+browser.tabs.onCreated.addListener((tab) => {
+  console.log("[DIAG onCreated]", tab.id,
+    `discarded=${tab.discarded} status=${tab.status} openerTabId=${tab.openerTabId} url=${tab.url}`);
+
+  browser.sessions.getTabValue(tab.id, 'markId').then(markId => {
+    console.log("[DIAG onCreated] getTabValue markId=", markId);
+    if (markId !== undefined) {
+      // A markId survived — check if the original mark's tabId is still a live tab
+      const mark = marksTree.marks[markId];
+      if (mark) {
+        browser.tabs.get(mark.tabId).then(
+          existingTab => console.log("[DIAG onCreated] original tab still alive:", existingTab.id, existingTab.url),
+          ()          => console.log("[DIAG onCreated] original tab is GONE (markId=", markId, "mark.tabId=", mark.tabId, ")")
+        );
+      } else {
+        console.log("[DIAG onCreated] markId found but no matching mark in tree:", markId);
+      }
+    }
+  }).catch(err => {
+    console.log("[DIAG onCreated] getTabValue error:", err);
+  });
 });
 
 // FIX BUG-6: the original listener called removeMark(`mark-${tabId}`) which never matched
