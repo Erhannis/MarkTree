@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderMarksTree(tree) {
-    console.log('Rendering marks tree', tree);
     const container = document.getElementById('sidebar-content');
     container.innerHTML = ''; // Clear existing content
     renderFolder(tree.folders['root'], container, tree);
@@ -86,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderFolder(folder, container, tree) {
-    console.log(`Rendering folder: ${folder.name}`, folder);
     const folderElement = document.createElement('div');
     folderElement.className = 'folder';
     folderElement.textContent = folder.name;
@@ -168,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderMark(mark, container, tree) {
-    console.log(`Rendering mark: ${mark.title}`, mark);
     const markElement = document.createElement('div');
     markElement.className = 'mark';
     markElement.textContent = `${mark.title} (${mark.url})`;
