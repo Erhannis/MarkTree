@@ -55,6 +55,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  document.getElementById('find-current').onclick = () => {
+    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+      const tab = tabs[0];
+      browser.sessions.getTabValue(tab.id, 'markId').then(markId => {
+        if (!markId || !currentTree || !currentTree.marks[markId]) {
+          alert('No mark found for the current tab.');
+          return;
+        }
+        // Expand all collapsed ancestor folders without persisting the change
+        let folderId = currentTree.marks[markId].folderId;
+        while (folderId) {
+          const folderEl = document.querySelector(`[data-id="${folderId}"]`);
+          if (folderEl) {
+            folderEl.classList.remove('collapsed');
+            const children = folderEl.querySelector('.children');
+            if (children) children.classList.remove('collapsed');
+          }
+          const folder = currentTree.folders[folderId];
+          folderId = folder && folder.parentId ? folder.parentId : null;
+        }
+        // Select the mark and scroll it into view
+        clearSelection();
+        const markEl = document.querySelector(`[data-id="${markId}"]`);
+        if (markEl) {
+          selectItem(markEl);
+          markEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
+  };
+
   let selectedItems = new Set();
   let currentTree = null; // Define a global variable to hold the current tree state
 
