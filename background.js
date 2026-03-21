@@ -33,6 +33,7 @@ function createMark(tab, folderId = "root") {
   };
   marksTree.marks[markId] = mark;
   marksTree.folders[folderId].children.push(markId);
+  browser.sessions.setTabValue(tab.id, 'markId', markId);
   saveMarksTree();
   notifySidebar();
 }
@@ -48,35 +49,62 @@ function createNewMark(folderId = "root") {
 
 function handleTabUpdate(tabId, changeInfo, tab) {
   console.log("handleTabUpdate", tabId, changeInfo, tab);
-  if (changeInfo.status === 'complete') {
-    // FIX BUG-2: this tab was opened to reopen an existing mark — update it, don't duplicate
-    if (tabsForReopening.has(tabId)) {
-      const markId = tabsForReopening.get(tabId);
-      tabsForReopening.delete(tabId);
-      updateMarkById(markId, { url: tab.url, title: tab.title });
+  if (changeInfo.status !== 'complete') return;
+
+  // Step 1: tab was opened by activateOrOpenMark — reconnect to existing mark
+  if (tabsForReopening.has(tabId)) {
+    const markId = tabsForReopening.get(tabId);
+    tabsForReopening.delete(tabId);
+    updateMarkById(markId, { url: tab.url, title: tab.title });
+    browser.sessions.setTabValue(tabId, 'markId', markId);
+    return;
+  }
+
+  // Step 2: use sessions API to identify what this tab is
+  browser.sessions.getTabValue(tabId, 'markId').then(markId => {
+    if (markId !== undefined && marksTree.marks[markId]) {
+      const mark = marksTree.marks[markId];
+
+      if (mark.tabId === tabId) {
+        // 2a: same tab already associated with this mark — just update url/title
+        console.log("Updating existing mark:", markId);
+        updateMarkById(markId, { url: tab.url, title: tab.title });
+        return;
+      }
+
+      // 2b: markId found but tabId differs — session restore or tab duplication
+      browser.tabs.get(mark.tabId).then(
+        () => {
+          // Original tab still alive → this is a duplicate tab → create a new mark
+          console.log("Duplicate tab detected for mark:", markId, "— creating new mark");
+          createMark(tab, mark.folderId);
+        },
+        () => {
+          // Original tab gone → session restore → reconnect this tab to the existing mark
+          console.log("Session restore detected for mark:", markId, "— reconnecting tabId", tabId);
+          mark.tabId = tabId;
+          browser.sessions.setTabValue(tabId, 'markId', markId);
+          updateMarkById(markId, { url: tab.url, title: tab.title });
+        }
+      );
       return;
     }
 
-    const existingMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tabId);
-    if (existingMarkId) {
-      console.log("Updating existing mark:", existingMarkId);
-      updateMark(tabId, { url: tab.url, title: tab.title });
-    } else if (tabsForNewMarks.has(tabId)) {
+    // Step 3: no sessions markId — new tab
+    if (tabsForNewMarks.has(tabId)) {
       const folderId = tabToFolderMap[tabId] || 'root';
       createMark(tab, folderId);
       tabsForNewMarks.delete(tabId);
       delete tabToFolderMap[tabId];
     } else {
-      if (!tabsForNewMarks.has(tab.id)) {
-        browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
-          const activeTab = activeTabs[0];
-          const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
-          const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
-          createMark(tab, folderId);
-        });
-      }
+      browser.tabs.query({ active: true, currentWindow: true }).then(activeTabs => {
+        const activeTab = activeTabs[0];
+        const activeMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === activeTab.id);
+        const folderId = activeMarkId ? marksTree.marks[activeMarkId].folderId : 'root';
+        createMark(tab, folderId);
+      });
     }
-  }
+  });
 }
 
 // FIX BUG-13: suppress recursive save/notify during folder deletion; only save once at top level
@@ -226,6 +254,7 @@ function openFolderInNewWindow(folderId) {
         const markId = markIds[index];
         if (marksTree.marks[markId]) {
           marksTree.marks[markId].tabId = tab.id;
+          browser.sessions.setTabValue(tab.id, 'markId', markId);
         }
       });
       saveMarksTree();
@@ -259,6 +288,7 @@ function activateOrOpenMark(markId) {
         // the existing mark instead of creating a duplicate.
         tabsForReopening.set(newTab.id, markId);
         mark.tabId = newTab.id;
+        browser.sessions.setTabValue(newTab.id, 'markId', markId);
         saveMarksTree();
       });
     }
@@ -277,6 +307,21 @@ function loadMarksTree() {
     if (result.marksTree) {
       marksTree = result.marksTree;
     }
+    // Backfill setTabValue for any marks that predate the sessions API change.
+    // For each open tab that matches a mark but has no stored markId, set it now
+    // so the next restart can reconnect correctly without a tabId scan.
+    browser.tabs.query({}).then(tabs => {
+      tabs.forEach(tab => {
+        const markId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tab.id);
+        if (markId) {
+          browser.sessions.getTabValue(tab.id, 'markId').then(existing => {
+            if (existing === undefined) {
+              browser.sessions.setTabValue(tab.id, 'markId', markId);
+            }
+          });
+        }
+      });
+    });
     treeLoaded = true;
     for (const args of pendingTabUpdates) {
       handleTabUpdate(...args);
@@ -316,10 +361,6 @@ browser.commands.onCommand.addListener(command => {
 // FIX BUG-4: queue events that arrive before loadMarksTree() resolves to prevent
 //            them from saving an empty tree and wiping stored data.
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // DIAG: log every onUpdated firing so we can see the event order
-  console.log("[DIAG onUpdated]", tabId, JSON.stringify(changeInfo),
-    `discarded=${tab.discarded} status=${tab.status} url=${tab.url}`);
-
   if (!treeLoaded) {
     if (changeInfo.status === 'complete') {
       pendingTabUpdates.push([tabId, changeInfo, tab]);
@@ -327,30 +368,6 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     return;
   }
   handleTabUpdate(tabId, changeInfo, tab);
-});
-
-// DIAG: log onCreated to observe tab state and any existing session markId
-browser.tabs.onCreated.addListener((tab) => {
-  console.log("[DIAG onCreated]", tab.id,
-    `discarded=${tab.discarded} status=${tab.status} openerTabId=${tab.openerTabId} url=${tab.url}`);
-
-  browser.sessions.getTabValue(tab.id, 'markId').then(markId => {
-    console.log("[DIAG onCreated] getTabValue markId=", markId);
-    if (markId !== undefined) {
-      // A markId survived — check if the original mark's tabId is still a live tab
-      const mark = marksTree.marks[markId];
-      if (mark) {
-        browser.tabs.get(mark.tabId).then(
-          existingTab => console.log("[DIAG onCreated] original tab still alive:", existingTab.id, existingTab.url),
-          ()          => console.log("[DIAG onCreated] original tab is GONE (markId=", markId, "mark.tabId=", mark.tabId, ")")
-        );
-      } else {
-        console.log("[DIAG onCreated] markId found but no matching mark in tree:", markId);
-      }
-    }
-  }).catch(err => {
-    console.log("[DIAG onCreated] getTabValue error:", err);
-  });
 });
 
 // FIX BUG-6: the original listener called removeMark(`mark-${tabId}`) which never matched
