@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "MarkTree",
-  "version": "1.0",
+  "version": "1.1",
   "description": "For organizing and preserving tabs indefinitely across sessions.  Each new tab gets a mark, which you can organize into trees.",
   "permissions": [
     "tabs",
