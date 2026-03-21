@@ -413,6 +413,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     openFolderInNewWindow(message.folderId);
   } else if (message.action === 'hideFolderTabs') {
     hideFolderTabs(message.folderId);
+  } else if (message.action === 'updateMarks') {
+    // Sidebar imported a new tree — reload so background in-memory state stays in sync.
+    // Without this, the next saveMarksTree() call would overwrite the imported tree.
+    loadMarksTree();
   }
 });
 
