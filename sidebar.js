@@ -77,6 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const spacer = document.createElement('div');
     spacer.className = 'spacer';
     container.appendChild(spacer);
+    // FIX BUG-10: every re-render rebuilds the DOM, losing the selected CSS class.
+    // Re-apply it for any items still in selectedItems.
+    selectedItems.forEach(id => {
+      const el = container.querySelector(`[data-id="${id}"]`);
+      if (el) el.classList.add('selected');
+    });
   }
 
   function renderFolder(folder, container, tree) {
@@ -106,8 +112,14 @@ document.addEventListener('DOMContentLoaded', () => {
       event.stopPropagation();
     };
 
+    // FIX BUG-9: was using selectedItems directly, so dragging an unselected item would
+    // drag the selection instead. Ensure the dragged item is always included.
     folderElement.ondragstart = (event) => {
       console.log('Folder drag started', folder.id);
+      if (!selectedItems.has(folder.id)) {
+        clearSelection();
+        selectItem(folderElement);
+      }
       const draggedIds = Array.from(selectedItems);
       event.dataTransfer.setData('text/plain', JSON.stringify(draggedIds));
       event.stopPropagation();
@@ -176,8 +188,13 @@ document.addEventListener('DOMContentLoaded', () => {
       event.stopPropagation();
     };
 
+    // FIX BUG-9: same as folder — ensure dragged item is included in the drag set.
     markElement.ondragstart = (event) => {
       console.log('Mark drag started', mark.id);
+      if (!selectedItems.has(mark.id)) {
+        clearSelection();
+        selectItem(markElement);
+      }
       const draggedIds = Array.from(selectedItems);
       event.dataTransfer.setData('text/plain', JSON.stringify(draggedIds));
       event.stopPropagation();
@@ -206,21 +223,13 @@ document.addEventListener('DOMContentLoaded', () => {
       showContextMenu(event, mark.id, false);
     };
 
+    // FIX BUG-1/2: was directly creating a tab and sending a broken 'updateMark' message
+    // (wrong arg: message.markId instead of tabId+updateInfo), which left the mark's tabId
+    // stale and caused onUpdated to create a duplicate mark on every reopen.
+    // Background now handles tab creation via activateOrOpenMark.
     markElement.ondblclick = () => {
       console.log('Mark double-clicked', mark.id);
-      browser.tabs.query({}).then(tabs => {
-        const existingTab = tabs.find(tab => tab.id === mark.tabId);
-        if (existingTab) {
-          console.log('Focusing existing tab', mark.tabId);
-          browser.tabs.update(mark.tabId, { active: true });
-        } else {
-          console.log('Opening new tab for mark', mark.url);
-          browser.tabs.create({ url: mark.url }).then(newTab => {
-            mark.tabId = newTab.id;
-            browser.runtime.sendMessage({ action: 'updateMark', tabId: newTab.id, updateInfo: { url: mark.url, title: mark.title } });
-          });
-        }
-      });
+      browser.runtime.sendMessage({ action: 'activateOrOpenMark', markId: mark.id });
     };
 
     container.appendChild(markElement);
@@ -259,6 +268,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function selectRange(targetElement) {
     const targetId = targetElement.dataset.id;
     const allItems = Array.from(document.querySelectorAll('.folder, .mark'));
+    // FIX BUG-11: with nothing previously selected, findIndex returns -1 for both
+    // firstSelected and lastSelected, making the range calculation meaningless.
+    if (selectedItems.size === 0) {
+      selectItem(targetElement);
+      return;
+    }
     const selectedArray = Array.from(selectedItems);
     const firstSelected = selectedArray[0];
     const lastSelected = selectedArray[selectedArray.length - 1];

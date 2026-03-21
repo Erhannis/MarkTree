@@ -4,7 +4,7 @@ let marksTree = {
       id: "root",
       name: "root",
       children: [],
-      collapsed: false // Add collapsed property
+      collapsed: false
     }
   },
   marks: {}
@@ -12,6 +12,13 @@ let marksTree = {
 
 let tabsForNewMarks = new Set();
 let tabToFolderMap = {};
+
+// FIX BUG-2: tracks tabs opened to reopen a closed-tab mark (tabId → markId)
+let tabsForReopening = new Map();
+
+// FIX BUG-4: queue tab update events that arrive before loadMarksTree() resolves
+let treeLoaded = false;
+let pendingTabUpdates = [];
 
 // Utility functions to manage the marks tree
 function createMark(tab, folderId = "root") {
@@ -42,6 +49,14 @@ function createNewMark(folderId = "root") {
 function handleTabUpdate(tabId, changeInfo, tab) {
   console.log("handleTabUpdate", tabId, changeInfo, tab);
   if (changeInfo.status === 'complete') {
+    // FIX BUG-2: this tab was opened to reopen an existing mark — update it, don't duplicate
+    if (tabsForReopening.has(tabId)) {
+      const markId = tabsForReopening.get(tabId);
+      tabsForReopening.delete(tabId);
+      updateMarkById(markId, { url: tab.url, title: tab.title });
+      return;
+    }
+
     const existingMarkId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tabId);
     if (existingMarkId) {
       console.log("Updating existing mark:", existingMarkId);
@@ -64,15 +79,18 @@ function handleTabUpdate(tabId, changeInfo, tab) {
   }
 }
 
-function removeMark(markId) {
+// FIX BUG-13: suppress recursive save/notify during folder deletion; only save once at top level
+function removeMark(markId, suppressSaveAndNotify = false) {
   console.log("removeMark", markId);
   const mark = marksTree.marks[markId];
   if (mark) {
     const folder = marksTree.folders[mark.folderId];
     folder.children = folder.children.filter(id => id !== markId);
     delete marksTree.marks[markId];
-    saveMarksTree();
-    notifySidebar();
+    if (!suppressSaveAndNotify) {
+      saveMarksTree();
+      notifySidebar();
+    }
   }
 }
 
@@ -84,7 +102,7 @@ function createFolder(folderName, parentId = "root") {
     name: folderName,
     children: [],
     parentId: parentId,
-    collapsed: false // Add collapsed property
+    collapsed: false
   };
   marksTree.folders[folderId] = folder;
   marksTree.folders[parentId].children.push(folderId);
@@ -92,15 +110,18 @@ function createFolder(folderName, parentId = "root") {
   notifySidebar();
 }
 
-function removeFolder(folderId) {
+// FIX BUG-13: suppress recursive save/notify; only save once at top level
+function removeFolder(folderId, suppressSaveAndNotify = false) {
   console.log("removeFolder", folderId);
   const folder = marksTree.folders[folderId];
   if (folder) {
-    folder.children.forEach(childId => {
+    // Snapshot children before iteration; recursive calls modify the arrays
+    const children = folder.children.slice();
+    children.forEach(childId => {
       if (marksTree.folders[childId]) {
-        removeFolder(childId);
+        removeFolder(childId, true);
       } else if (marksTree.marks[childId]) {
-        removeMark(childId);
+        removeMark(childId, true);
       }
     });
     if (folderId !== "root") {
@@ -108,8 +129,10 @@ function removeFolder(folderId) {
       parent.children = parent.children.filter(id => id !== folderId);
       delete marksTree.folders[folderId];
     }
-    saveMarksTree();
-    notifySidebar();
+    if (!suppressSaveAndNotify) {
+      saveMarksTree();
+      notifySidebar();
+    }
   }
 }
 
@@ -124,6 +147,18 @@ function updateMark(tabId, updateInfo) {
     if (updateInfo.url) {
       mark.url = updateInfo.url;
     }
+    saveMarksTree();
+    notifySidebar();
+  }
+}
+
+// FIX BUG-2: update mark by markId directly (used when reopening a closed-tab mark)
+function updateMarkById(markId, updateInfo) {
+  console.log("updateMarkById", markId, updateInfo);
+  const mark = marksTree.marks[markId];
+  if (mark) {
+    if (updateInfo.title) mark.title = updateInfo.title;
+    if (updateInfo.url)   mark.url   = updateInfo.url;
     saveMarksTree();
     notifySidebar();
   }
@@ -175,25 +210,26 @@ function isDescendant(childId, parentId) {
   return false;
 }
 
+// FIX BUG-3: update mark tabIds before onUpdated fires, preventing duplicate mark creation.
+// FIX BUG-5: was using folder.children[index] (unfiltered) instead of the filtered markIds array,
+//            causing wrong tabId assignments when the folder contains subfolders.
 function openFolderInNewWindow(folderId) {
   const folder = marksTree.folders[folderId];
   if (folder) {
-    const urls = folder.children
-      .filter(id => marksTree.marks[id])
-      .map(id => marksTree.marks[id].url);
-    browser.windows.create({ url: urls }).then(window => {
-      const newWindowId = window.id;
-      browser.tabs.query({ windowId: newWindowId }).then(tabs => {
-        console.log("browser.tabs.query", newWindowId, tabs);
-        tabs.forEach((tab, index) => {
-          const markId = folder.children[index];
-          if (marksTree.marks[markId]) {
-            marksTree.marks[markId].tabId = tab.id;
-          }
-        });
-        saveMarksTree();
-        notifySidebar();
+    // Keep markIds and urls aligned by filtering together
+    const markIds = folder.children.filter(id => marksTree.marks[id]);
+    const urls    = markIds.map(id => marksTree.marks[id].url);
+    browser.windows.create({ url: urls }).then(win => {
+      // win.tabs is available immediately in the promise resolution, before tabs finish
+      // loading, so we update tabIds here before any onUpdated(complete) can fire.
+      win.tabs.forEach((tab, index) => {
+        const markId = markIds[index];
+        if (marksTree.marks[markId]) {
+          marksTree.marks[markId].tabId = tab.id;
+        }
       });
+      saveMarksTree();
+      notifySidebar();
     });
   }
 }
@@ -207,23 +243,53 @@ function hideFolderTabs(folderId) {
   }
 }
 
+// FIX BUG-2: sidebar sends activateOrOpenMark; background handles tab creation so it can
+//            register the new tabId in tabsForReopening before onUpdated fires.
+function activateOrOpenMark(markId) {
+  const mark = marksTree.marks[markId];
+  if (!mark) return;
+  browser.tabs.query({}).then(tabs => {
+    const existingTab = tabs.find(tab => tab.id === mark.tabId);
+    if (existingTab) {
+      browser.tabs.update(mark.tabId, { active: true });
+      browser.windows.update(existingTab.windowId, { focused: true });
+    } else {
+      browser.tabs.create({ url: mark.url }).then(newTab => {
+        // Register before onUpdated(complete) fires so handleTabUpdate updates
+        // the existing mark instead of creating a duplicate.
+        tabsForReopening.set(newTab.id, markId);
+        mark.tabId = newTab.id;
+        saveMarksTree();
+      });
+    }
+  });
+}
+
 function saveMarksTree() {
   console.log("saveMarksTree");
   browser.storage.local.set({ marksTree });
 }
 
+// FIX BUG-4: set treeLoaded and flush any tab events that arrived before storage resolved.
 function loadMarksTree() {
   console.log("loadMarksTree");
   browser.storage.local.get('marksTree').then(result => {
     if (result.marksTree) {
       marksTree = result.marksTree;
     }
+    treeLoaded = true;
+    for (const args of pendingTabUpdates) {
+      handleTabUpdate(...args);
+    }
+    pendingTabUpdates = [];
   });
 }
 
 function notifySidebar() {
   console.log("notifySidebar");
-  browser.runtime.sendMessage({ action: 'updateMarks' });
+  browser.runtime.sendMessage({ action: 'updateMarks' }).catch(() => {
+    // Sidebar may not be open; ignore the error.
+  });
 }
 
 browser.commands.onCommand.addListener(command => {
@@ -247,14 +313,21 @@ browser.commands.onCommand.addListener(command => {
   }
 });
 
+// FIX BUG-4: queue events that arrive before loadMarksTree() resolves to prevent
+//            them from saving an empty tree and wiping stored data.
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (!treeLoaded) {
+    if (changeInfo.status === 'complete') {
+      pendingTabUpdates.push([tabId, changeInfo, tab]);
+    }
+    return;
+  }
   handleTabUpdate(tabId, changeInfo, tab);
 });
 
-browser.tabs.onRemoved.addListener(tabId => {
-  console.log("onRemoved", tabId);
-  removeMark(`mark-${tabId}`);
-});
+// FIX BUG-6: the original listener called removeMark(`mark-${tabId}`) which never matched
+// anything (mark IDs are mark-${Date.now()}, not mark-${tabId}). The intended behavior is
+// that marks survive tab closure, so this listener is intentionally removed per todo.txt.
 
 // Context menu for opening a link with a corresponding mark
 browser.contextMenus.create({
@@ -283,8 +356,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     removeFolder(message.folderId);
   } else if (message.action === 'deleteMark') {
     removeMark(message.markId);
-  } else if (message.action === 'updateMark') {
-    updateMark(message.markId);
+  } else if (message.action === 'activateOrOpenMark') {
+    // FIX BUG-1/2: was 'updateMark' with wrong args (message.markId instead of tabId+updateInfo).
+    // Tab creation now lives in background to avoid race with onUpdated.
+    activateOrOpenMark(message.markId);
   } else if (message.action === 'moveItems') {
     moveItems(message.draggedIds, message.targetFolderId);
   } else if (message.action === 'toggleFolderCollapse') {
