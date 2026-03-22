@@ -19,6 +19,7 @@ let tabsForReopening = new Map();
 // FIX BUG-4: queue tab update events that arrive before loadMarksTree() resolves
 let treeLoaded = false;
 let pendingTabUpdates = [];
+let pendingUrlReconnects = []; // discarded ancient tabs awaiting URL-based reconnection
 
 // Utility functions to manage the marks tree
 function createMark(tab, folderId = "root") {
@@ -268,7 +269,11 @@ function hideFolderTabs(folderId) {
   if (folder) {
     folder.children
       .filter(id => marksTree.marks[id])
-      .forEach(id => browser.tabs.remove(marksTree.marks[id].tabId));
+      .forEach(id => {
+        browser.tabs.remove(marksTree.marks[id].tabId);
+        marksTree.marks[id].tabId = null;
+      });
+    saveMarksTree();
   }
 }
 
@@ -278,20 +283,38 @@ function activateOrOpenMark(markId) {
   const mark = marksTree.marks[markId];
   if (!mark) return;
   browser.tabs.query({}).then(tabs => {
+    // Fast path: mark.tabId is still valid.
     const existingTab = tabs.find(tab => tab.id === mark.tabId);
     if (existingTab) {
       browser.tabs.update(mark.tabId, { active: true });
       browser.windows.update(existingTab.windowId, { focused: true });
-    } else {
-      browser.tabs.create({ url: mark.url }).then(newTab => {
-        // Register before onUpdated(complete) fires so handleTabUpdate updates
-        // the existing mark instead of creating a duplicate.
-        tabsForReopening.set(newTab.id, markId);
-        mark.tabId = newTab.id;
-        browser.sessions.setTabValue(newTab.id, 'markId', markId);
-        saveMarksTree();
-      });
+      return;
     }
+    // mark.tabId is stale (e.g. session restore assigned a new tabId before onUpdated fired).
+    // Scan all tabs for one whose stored markId matches, to find the restored tab.
+    Promise.all(tabs.map(tab =>
+      browser.sessions.getTabValue(tab.id, 'markId').then(v => v === markId ? tab : null)
+    )).then(results => {
+      const restoredTab = results.find(t => t !== null);
+      if (restoredTab) {
+        // Found the restored tab — reconnect and focus it without creating a new tab.
+        mark.tabId = restoredTab.id;
+        browser.sessions.setTabValue(restoredTab.id, 'markId', markId);
+        saveMarksTree();
+        browser.tabs.update(restoredTab.id, { active: true });
+        browser.windows.update(restoredTab.windowId, { focused: true });
+      } else {
+        // Truly gone — open a new tab.
+        browser.tabs.create({ url: mark.url }).then(newTab => {
+          // Register before onUpdated(complete) fires so handleTabUpdate updates
+          // the existing mark instead of creating a duplicate.
+          tabsForReopening.set(newTab.id, markId);
+          mark.tabId = newTab.id;
+          browser.sessions.setTabValue(newTab.id, 'markId', markId);
+          saveMarksTree();
+        });
+      }
+    });
   });
 }
 
@@ -307,26 +330,19 @@ function loadMarksTree() {
     if (result.marksTree) {
       marksTree = result.marksTree;
     }
-    // Backfill setTabValue for any marks that predate the sessions API change.
-    // For each open tab that matches a mark but has no stored markId, set it now
-    // so the next restart can reconnect correctly without a tabId scan.
-    browser.tabs.query({}).then(tabs => {
-      tabs.forEach(tab => {
-        const markId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tab.id);
-        if (markId) {
-          browser.sessions.getTabValue(tab.id, 'markId').then(existing => {
-            if (existing === undefined) {
-              browser.sessions.setTabValue(tab.id, 'markId', markId);
-            }
-          });
-        }
-      });
-    });
+    // Null out all stored tabIds — Firefox resets tab ID counters on restart so
+    // all stored tabIds are stale. activateOrOpenMark uses the getTabValue scan.
+    Object.values(marksTree.marks).forEach(mark => { mark.tabId = null; });
+    saveMarksTree();
     treeLoaded = true;
     for (const args of pendingTabUpdates) {
       handleTabUpdate(...args);
     }
     pendingTabUpdates = [];
+    for (const tab of pendingUrlReconnects) {
+      reconnectTabByUrl(tab);
+    }
+    pendingUrlReconnects = [];
   });
 }
 
@@ -370,9 +386,38 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   handleTabUpdate(tabId, changeInfo, tab);
 });
 
-// FIX BUG-6: the original listener called removeMark(`mark-${tabId}`) which never matched
-// anything (mark IDs are mark-${Date.now()}, not mark-${tabId}). The intended behavior is
-// that marks survive tab closure, so this listener is intentionally removed per todo.txt.
+// For ancient tabs (created before setTabValue was introduced): if a discarded
+// (session-restored) tab has no stored markId, attempt to reconnect it by URL.
+// If multiple marks share the URL, the first match wins — accepted limitation.
+function reconnectTabByUrl(tab) {
+  const markId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].url === tab.url);
+  if (markId) {
+    console.log("Reconnecting ancient tab by URL:", tab.id, tab.url, "→", markId);
+    browser.sessions.setTabValue(tab.id, 'markId', markId);
+  }
+}
+
+browser.tabs.onCreated.addListener(tab => {
+  if (!tab.discarded) return;
+  browser.sessions.getTabValue(tab.id, 'markId').then(markId => {
+    if (markId !== undefined) return; // already connected
+    if (!treeLoaded) {
+      pendingUrlReconnects.push(tab);
+      return;
+    }
+    reconnectTabByUrl(tab);
+  });
+});
+
+// When a tab is closed, null its tabId so activateOrOpenMark doesn't accidentally
+// focus a different tab that Firefox later assigns the same ID to.
+browser.tabs.onRemoved.addListener(tabId => {
+  const markId = Object.keys(marksTree.marks).find(id => marksTree.marks[id].tabId === tabId);
+  if (markId) {
+    marksTree.marks[markId].tabId = null;
+    saveMarksTree();
+  }
+});
 
 // Context menu for opening a link with a corresponding mark
 browser.contextMenus.create({
